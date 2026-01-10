@@ -1,0 +1,11 @@
+Change Type		Command
+app_main.py changes	docker-compose up --build -d
+.env changes		docker-compose restart bal-agentic-backend
+Department files	docker-compose restart bal-agentic-backend
+Templates/Config	docker-compose restart bal-agentic-backend
+
+Step	Location	Command
+1. Build	HERE (dev)	docker build -t pramit3084/bal-agentic-backend:latest .
+2. Push	HERE (dev)	docker push pramit3084/bal-agentic-backend:latest
+3. Pull	THERE (server)	docker-compose pull
+4. Run	THERE (server)	docker-compose up -d

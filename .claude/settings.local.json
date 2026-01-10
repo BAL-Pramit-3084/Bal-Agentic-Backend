@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"E:\\MCP-with-API\\departments\" /b)",
+      "Bash(dir:*)",
+      "Bash(cat:*)",
+      "Bash(findstr:*)",
+      "Bash(set)",
+      "Bash(python:*)",
+      "Bash(git checkout:*)",
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(del \"E:\\\\MCP-with-API\\\\nul\")",
+      "Bash(echo:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

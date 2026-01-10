@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Furnace Operations Dashboard - 2025-11-17</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .dashboard-header h1 {
+            color: #2d3748;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .dashboard-header .subtitle {
+            color: #718096;
+            font-size: 1.1em;
+        }
+
+        .dashboard-header .date-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #e2e8f0;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 24px;
+        }
+
+        .icon-production {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .icon-power {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .icon-recovery {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .icon-operational {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .icon-tapping {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .icon-slag {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+        }
+
+        .card-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .metric-label {
+            font-size: 0.85em;
+            color: #718096;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .metric-unit {
+            font-size: 0.6em;
+            color: #a0aec0;
+            margin-left: 5px;
+        }
+
+        .metric.variance-positive {
+            border-left-color: #48bb78;
+        }
+
+        .metric.variance-negative {
+            border-left-color: #f56565;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .furnace-comparison {
+            margin-top: 20px;
+        }
+
+        .furnace-row {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f7fafc;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .furnace-row:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+
+        .furnace-label {
+            font-weight: 600;
+            color: #2d3748;
+            width: 80px;
+            font-size: 1.1em;
+        }
+
+        .furnace-bar-container {
+            flex: 1;
+            height: 25px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            margin: 0 15px;
+        }
+
+        .furnace-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .furnace-value {
+            font-weight: 600;
+            color: #2d3748;
+            width: 100px;
+            text-align: right;
+            font-size: 1em;
+        }
+
+        .wide-card {
+            grid-column: 1 / -1;
+        }
+
+        .insights-section {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .insights-title {
+            font-weight: 700;
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .insight-item {
+            padding: 10px 0;
+            color: #856404;
+            display: flex;
+            align-items: start;
+        }
+
+        .insight-icon {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .critical-alert {
+            background: #f8d7da;
+            border-left: 5px solid #dc3545;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .critical-title {
+            font-weight: 700;
+            color: #721c24;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .critical-item {
+            padding: 10px 0;
+            color: #721c24;
+        }
+
+        .success-highlight {
+            background: #d4edda;
+            border-left: 5px solid #28a745;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .success-title {
+            font-weight: 700;
+            color: #155724;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .success-item {
+            padding: 10px 0;
+            color: #155724;
+        }
+
+        .tapping-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .tapping-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .tapping-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .tapping-table tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .summary-value {
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge-success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .badge-warning {
+            background: #feebc8;
+            color: #7c2d12;
+        }
+
+        .badge-danger {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>🏭 Furnace Operations Dashboard</h1>
+            <p class="subtitle">Comprehensive Performance Analysis & Operational Insights</p>
+            <span class="date-badge">📅 November 17, 2025</span>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="card wide-card">
+            <div class="card-header">
+                <div class="card-icon icon-production">📊</div>
+                <h2 class="card-title">Executive Summary - Plant Performance</h2>
+            </div>
+            <div class="summary-grid" id="executiveSummary"></div>
+        </div>
+
+        <!-- Production Performance -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon icon-production">🏭</div>
+                <h2 class="card-title">Production Performance</h2>
+            </div>
+            <div class="metric-grid" id="productionMetrics"></div>
+            <div class="chart-container">
+                <canvas id="productionChart"></canvas>
+            </div>
+            <div class="furnace-comparison" id="productionComparison"></div>
+        </div>
+
+        <!-- Power Consumption & Efficiency -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon icon-power">⚡</div>
+                <h2 class="card-title">Power Consumption & Efficiency</h2>
+            </div>
+            <div class="metric-grid" id="powerMetrics"></div>
+            <div class="chart-container">
+                <canvas id="powerChart"></canvas>
+            </div>
+            <div class="furnace-comparison" id="powerComparison"></div>
+        </div>
+
+        <!-- Chromium Recovery -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon icon-recovery">🔬</div>
+                <h2 class="card-title">Chromium Recovery & Material Efficiency</h2>
+            </div>
+            <div class="metric-grid" id="recoveryMetrics"></div>
+            <div class="chart-container">
+                <canvas id="recoveryChart"></canvas>
+            </div>
+            <div class="furnace-comparison" id="recoveryComparison"></div>
+        </div>
+
+        <!-- Operational Excellence -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon icon-operational">✅</div>
+                <h2 class="card-title">Operational Excellence Metrics</h2>
+            </div>
+            <div class="metric-grid" id="operationalMetrics"></div>
+            <div class="chart-container">
+                <canvas id="operationalChart"></canvas>
+            </div>
+            <div class="furnace-comparison" id="operationalComparison"></div>
+        </div>
+
+        <!-- Tapping Operations -->
+        <div class="card wide-card">
+            <div class="card-header">
+                <div class="card-icon icon-tapping">🔥</div>
+                <h2 class="card-title">Tapping Operations Analysis</h2>
+            </div>
+            <div class="metric-grid" id="tappingMetrics"></div>
+            <div class="chart-container">
+                <canvas id="tappingChart"></canvas>
+            </div>
+            <div style="margin-top: 30px;">
+                <h3 style="margin-bottom: 15px; color: #2d3748;">Detailed Tapping Comparison by Furnace</h3>
+                <div class="furnace-comparison" id="tappingComparison"></div>
+            </div>
+        </div>
+
+        <!-- Slag Quality & Metal-Slag Ratio -->
+        <div class="card wide-card">
+            <div class="card-header">
+                <div class="card-icon icon-slag">🧪</div>
+                <h2 class="card-title">Slag Quality & Metal-Slag Ratio Analysis</h2>
+            </div>
+            <div class="metric-grid" id="slagMetrics"></div>
+            <div class="chart-container">
+                <canvas id="slagChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Key Insights -->
+        <div class="card wide-card">
+            <div class="card-header">
+                <div class="card-icon icon-operational">💡</div>
+                <h2 class="card-title">Key Insights & Performance Analysis</h2>
+            </div>
+            <div id="insightsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Helper function to safely format numbers (handles null values)
+        function fmt(value, decimals = 1) {
+            if (value === null || value === undefined) return '-';
+            return value.toFixed(decimals);
+        }
+
+        // Load analysis data
+        const analysisData = {
+            "production": {
+                "individual_furnaces": [
+                    {"furnace": "I", "td_plan": 61.147, "td_actual": 53.58, "td_variance": -7.57, "mtd_plan": 1043.482, "mtd_actual": 868.83, "mtd_variance": -174.65, "production_rate_pct": 104.18, "mtd_production_rate_pct": 100.56},
+                    {"furnace": "II", "td_plan": 87.977, "td_actual": 85.8, "td_variance": -2.18, "mtd_plan": 1476.173, "mtd_actual": 1382.65, "mtd_variance": -93.52, "production_rate_pct": 97.53, "mtd_production_rate_pct": 93.66},
+                    {"furnace": "III", "td_plan": 87.977, "td_actual": 84.93, "td_variance": -3.05, "mtd_plan": 1490.689, "mtd_actual": 1357.68, "mtd_variance": -133.01, "production_rate_pct": 96.54, "mtd_production_rate_pct": 91.08},
+                    {"furnace": "IV", "td_plan": 61.584, "td_actual": 60.38, "td_variance": -1.2, "mtd_plan": 1043.482, "mtd_actual": 978.66, "mtd_variance": -64.82, "production_rate_pct": 98.05, "mtd_production_rate_pct": 93.79},
+                    {"furnace": "V", "td_plan": 61.147, "td_actual": 60.31, "td_variance": -0.84, "mtd_plan": 1043.482, "mtd_actual": 937.18, "mtd_variance": -106.3, "production_rate_pct": 98.63, "mtd_production_rate_pct": 89.81}
+                ],
+                "plant_total": {
+                    "td_plan": 350.113, "td_actual": 345.0, "mtd_plan": 5917.813, "mtd_actual": 5525.0, "td_variance": -5.11, "mtd_variance": -392.81
+                }
+            },
+            "power": {
+                "individual_furnaces": [
+                    {"furnace": "I", "td_plan": 208.513, "td_actual": 194.4, "td_variance": 0.0, "avg_load_mw": 8.1, "sp_power_kwh": 3628.219, "mtd_sp_power_kwh": 3718.104},
+                    {"furnace": "II", "td_plan": 300.0, "td_actual": 311.5, "td_variance": 0.0, "avg_load_mw": 12.979, "sp_power_kwh": 3630.536, "mtd_sp_power_kwh": 3695.223},
+                    {"furnace": "III", "td_plan": 300.0, "td_actual": 308.4, "td_variance": 0.0, "avg_load_mw": 12.85, "sp_power_kwh": 3631.226, "mtd_sp_power_kwh": 3691.813},
+                    {"furnace": "IV", "td_plan": 210.0, "td_actual": 219.2, "td_variance": 0.0, "avg_load_mw": 9.133, "sp_power_kwh": 3630.341, "mtd_sp_power_kwh": 3715.897},
+                    {"furnace": "V", "td_plan": 208.513, "td_actual": 219.0, "td_variance": 0.0, "avg_load_mw": 9.125, "sp_power_kwh": 3631.239, "mtd_sp_power_kwh": 3716.255}
+                ],
+                "plant_total": {
+                    "td_plan": 1198.513, "td_actual": 1252.5, "mtd_plan": 20257.5, "mtd_actual": 20471.3, "td_variance": 0.0, "mtd_variance": 213.8, "avg_load_mw": 52.188, "sp_power_kwh": 3630.435
+                }
+            },
+            "recovery": {
+                "individual_furnaces": [
+                    {"furnace": "I", "cr_recovery_pct": 85.24, "mtd_cr_recovery_pct": 86.86, "sp_cr_ore_kg": 2486.525, "sp_carbon_kg": 414.437},
+                    {"furnace": "II", "cr_recovery_pct": 80.66, "mtd_cr_recovery_pct": 80.57, "sp_cr_ore_kg": 2525.14, "sp_carbon_kg": 432.982},
+                    {"furnace": "III", "cr_recovery_pct": 90.1, "mtd_cr_recovery_pct": 84.14, "sp_cr_ore_kg": 2352.514, "sp_carbon_kg": 383.619},
+                    {"furnace": "IV", "cr_recovery_pct": 85.04, "mtd_cr_recovery_pct": 82.18, "sp_cr_ore_kg": 2504.174, "sp_carbon_kg": 412.819},
+                    {"furnace": "V", "cr_recovery_pct": 87.32, "mtd_cr_recovery_pct": 81.89, "sp_cr_ore_kg": 2468.927, "sp_carbon_kg": 407.107}
+                ],
+                "plant_avg": {
+                    "cr_recovery_pct": 85.49, "mtd_cr_recovery_pct": 82.88, "sp_cr_ore_kg": 2463.151, "sp_carbon_kg": 409.898
+                }
+            },
+            "operational": {
+                "individual_furnaces": [
+                    {"furnace": "I", "oee_pct": 100.0, "mtd_oee_pct": 100.0, "downtime_hours": 0.0, "mtd_downtime_hours": 0.083, "batches": 222.0},
+                    {"furnace": "II", "oee_pct": 97.526, "mtd_oee_pct": 93.626, "downtime_hours": 0.0, "mtd_downtime_hours": 0.25, "batches": 361.0},
+                    {"furnace": "III", "oee_pct": 96.537, "mtd_oee_pct": 91.014, "downtime_hours": 0.0, "mtd_downtime_hours": 0.366, "batches": 333.0},
+                    {"furnace": "IV", "oee_pct": 98.046, "mtd_oee_pct": 93.711, "downtime_hours": 0.0, "mtd_downtime_hours": 0.499, "batches": 252.0},
+                    {"furnace": "V", "oee_pct": 98.631, "mtd_oee_pct": 89.787, "downtime_hours": 0.0, "mtd_downtime_hours": 0.282, "batches": 248.0}
+                ],
+                "plant_metrics": {
+                    "oee_pct": 98.54, "mtd_oee_pct": 93.321, "downtime_hours": 0.0, "mtd_downtime_hours": 1.48, "total_batches": 1416.0
+                }
+            },
+            "tapping": {
+                "individual_furnaces": [
+                    {"furnace": "I", "total_taps": 5, "total_metal_out": 43.0, "total_slag_out": 47.0, "avg_tti_mwh": 32.48, "avg_slag_temp": 1744.2, "avg_mould_temp": 224.2, "metal_slag_ratio": 0.9148936170212766},
+                    {"furnace": "II", "total_taps": 10, "total_metal_out": 88.0, "total_slag_out": 89.0, "avg_tti_mwh": 32.5, "avg_slag_temp": 1743.6, "avg_mould_temp": 227.7, "metal_slag_ratio": 0.9887640449438202},
+                    {"furnace": "III", "total_taps": 10, "total_metal_out": 75.0, "total_slag_out": 89.0, "avg_tti_mwh": 31.35, "avg_slag_temp": 1744.7, "avg_mould_temp": 225.1, "metal_slag_ratio": 0.8426966292134831},
+                    {"furnace": "IV", "total_taps": 6, "total_metal_out": 47.0, "total_slag_out": 55.0, "avg_tti_mwh": 31.183333333333334, "avg_slag_temp": 1743.6666666666667, "avg_mould_temp": 221.5, "metal_slag_ratio": 0.8545454545454545},
+                    {"furnace": "V", "total_taps": 6, "total_metal_out": 44.0, "total_slag_out": 47.0, "avg_tti_mwh": 31.183333333333334, "avg_slag_temp": 1743.8333333333333, "avg_mould_temp": 224.66666666666666, "metal_slag_ratio": 0.9361702127659575}
+                ],
+                "overall_stats": {
+                    "total_taps": 37, "total_metal_out": 297.0, "total_slag_out": 327.0, "avg_tti_mwh": 31.843243243243244
+                }
+            },
+            "slag": {
+                "individual_furnaces": [
+                    {"furnace": "I", "slag_mt": 56.74, "mtd_slag_mt": 958.823, "metal_slag_ratio": 1.059, "cr2o3_in_slag_pct": 7.42},
+                    {"furnace": "II", "slag_mt": 88.736, "mtd_slag_mt": 1528.997, "metal_slag_ratio": 1.034, "cr2o3_in_slag_pct": 7.98},
+                    {"furnace": "III", "slag_mt": 86.842, "mtd_slag_mt": 1532.846, "metal_slag_ratio": 1.023, "cr2o3_in_slag_pct": 7.77},
+                    {"furnace": "IV", "slag_mt": 62.068, "mtd_slag_mt": 1122.04, "metal_slag_ratio": 1.028, "cr2o3_in_slag_pct": 7.18},
+                    {"furnace": "V", "slag_mt": 64.068, "mtd_slag_mt": 1065.653, "metal_slag_ratio": 1.062, "cr2o3_in_slag_pct": 7.38}
+                ],
+                "plant_metrics": {
+                    "slag_mt": 357.33, "mtd_slag_mt": 6207.663, "metal_slag_ratio": 1.036, "cr2o3_in_slag_pct": 7.546
+                }
+            }
+        };
+
+        // Executive Summary
+        const execSummary = document.getElementById('executiveSummary');
+        execSummary.innerHTML = `
+            <div class="summary-card">
+                <div class="summary-label">Total Production (TD)</div>
+                <div class="summary-value">${analysisData.production.plant_total.td_actual.toFixed(1)}</div>
+                <div class="summary-label" style="margin-top: 5px;">MT</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Power Consumption (TD)</div>
+                <div class="summary-value">${analysisData.power.plant_total.td_actual.toFixed(1)}</div>
+                <div class="summary-label" style="margin-top: 5px;">MWH</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Avg. Cr Recovery</div>
+                <div class="summary-value">${analysisData.recovery.plant_avg.cr_recovery_pct.toFixed(1)}%</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Plant OEE</div>
+                <div class="summary-value">${analysisData.operational.plant_metrics.oee_pct.toFixed(1)}%</div>
+            </div>
+        `;
+
+        // Production Metrics
+        const prodMetrics = document.getElementById('productionMetrics');
+        prodMetrics.innerHTML = `
+            <div class="metric">
+                <div class="metric-label">TD Planned</div>
+                <div class="metric-value">${fmt(analysisData.production.plant_total.td_plan, 1)}<span class="metric-unit">MT</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">TD Actual</div>
+                <div class="metric-value">${fmt(analysisData.production.plant_total.td_actual, 1)}<span class="metric-unit">MT</span></div>
+            </div>
+            <div class="metric ${analysisData.production.plant_total.td_variance !== null && analysisData.production.plant_total.td_variance < 0 ? 'variance-negative' : 'variance-positive'}">
+                <div class="metric-label">TD Variance</div>
+                <div class="metric-value">${fmt(analysisData.production.plant_total.td_variance, 1)}<span class="metric-unit">MT</span></div>
+            </div>
+            <div class="metric ${analysisData.production.plant_total.mtd_variance !== null && analysisData.production.plant_total.mtd_variance < 0 ? 'variance-negative' : 'variance-positive'}">
+                <div class="metric-label">MTD Variance</div>
+                <div class="metric-value">${fmt(analysisData.production.plant_total.mtd_variance, 1)}<span class="metric-unit">MT</span></div>
+            </div>
+        `;
+
+        // Production Chart
+        const prodChartCtx = document.getElementById('productionChart').getContext('2d');
+        new Chart(prodChartCtx, {
+            type: 'bar',
+            data: {
+                labels: analysisData.production.individual_furnaces.map(f => 'Furnace ' + f.furnace),
+                datasets: [{
+                    label: 'Planned (MT)',
+                    data: analysisData.production.individual_furnaces.map(f => f.td_plan),
+                    backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2
+                }, {
+                    label: 'Actual (MT)',
+                    data: analysisData.production.individual_furnaces.map(f => f.td_actual),
+                    backgroundColor: 'rgba(118, 75, 162, 0.6)',
+                    borderColor: 'rgba(118, 75, 162, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Production: Planned vs Actual (MT)'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Production Comparison
+        const prodComparison = document.getElementById('productionComparison');
+        const maxProduction = Math.max(...analysisData.production.individual_furnaces.map(f => f.td_actual));
+        prodComparison.innerHTML = '<h3 style="margin-bottom: 15px; color: #2d3748;">Production Rate Comparison</h3>' +
+            analysisData.production.individual_furnaces.map(f => `
+                <div class="furnace-row">
+                    <div class="furnace-label">Furnace ${f.furnace}</div>
+                    <div class="furnace-bar-container">
+                        <div class="furnace-bar" style="width: ${(f.production_rate_pct)}%">
+                            ${f.production_rate_pct.toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="furnace-value">${f.td_actual.toFixed(1)} MT</div>
+                </div>
+            `).join('');
+
+        // Power Metrics
+        const powerMetrics = document.getElementById('powerMetrics');
+        powerMetrics.innerHTML = `
+            <div class="metric">
+                <div class="metric-label">TD Planned</div>
+                <div class="metric-value">${fmt(analysisData.power.plant_total.td_plan, 1)}<span class="metric-unit">MWH</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">TD Actual</div>
+                <div class="metric-value">${fmt(analysisData.power.plant_total.td_actual, 1)}<span class="metric-unit">MWH</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Avg Load</div>
+                <div class="metric-value">${fmt(analysisData.power.plant_total.avg_load_mw, 2)}<span class="metric-unit">MW</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Specific Power</div>
+                <div class="metric-value">${fmt(analysisData.power.plant_total.sp_power_kwh, 0)}<span class="metric-unit">kWh</span></div>
+            </div>
+        `;
+
+        // Power Chart
+        const powerChartCtx = document.getElementById('powerChart').getContext('2d');
+        new Chart(powerChartCtx, {
+            type: 'line',
+            data: {
+                labels: analysisData.power.individual_furnaces.map(f => 'Furnace ' + f.furnace),
+                datasets: [{
+                    label: 'Specific Power (kWh/MT)',
+                    data: analysisData.power.individual_furnaces.map(f => f.sp_power_kwh),
+                    backgroundColor: 'rgba(245, 87, 108, 0.2)',
+                    borderColor: 'rgba(245, 87, 108, 1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Specific Power Consumption by Furnace'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+
+        // Power Comparison
+        const powerComparison = document.getElementById('powerComparison');
+        powerComparison.innerHTML = '<h3 style="margin-bottom: 15px; color: #2d3748;">Power Consumption Comparison</h3>' +
+            analysisData.power.individual_furnaces.map(f => `
+                <div class="furnace-row">
+                    <div class="furnace-label">Furnace ${f.furnace}</div>
+                    <div class="furnace-bar-container">
+                        <div class="furnace-bar" style="width: ${(f.td_actual / analysisData.power.plant_total.td_actual * 100)}%; background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);">
+                            ${(f.td_actual / analysisData.power.plant_total.td_actual * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="furnace-value">${f.td_actual.toFixed(1)} MWH</div>
+                </div>
+            `).join('');
+
+        // Recovery Metrics
+        const recoveryMetrics = document.getElementById('recoveryMetrics');
+        recoveryMetrics.innerHTML = `
+            <div class="metric">
+                <div class="metric-label">Cr Recovery (TD)</div>
+                <div class="metric-value">${analysisData.recovery.plant_avg.cr_recovery_pct.toFixed(2)}<span class="metric-unit">%</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Cr Recovery (MTD)</div>
+                <div class="metric-value">${analysisData.recovery.plant_avg.mtd_cr_recovery_pct.toFixed(2)}<span class="metric-unit">%</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Sp. Cr Ore</div>
+                <div class="metric-value">${analysisData.recovery.plant_avg.sp_cr_ore_kg.toFixed(0)}<span class="metric-unit">kg</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Sp. Carbon</div>
+                <div class="metric-value">${analysisData.recovery.plant_avg.sp_carbon_kg.toFixed(1)}<span class="metric-unit">kg</span></div>
+            </div>
+        `;
+
+        // Recovery Chart
+        const recoveryChartCtx = document.getElementById('recoveryChart').getContext('2d');
+        new Chart(recoveryChartCtx, {
+            type: 'bar',
+            data: {
+                labels: analysisData.recovery.individual_furnaces.map(f => 'Furnace ' + f.furnace),
+                datasets: [{
+                    label: 'Cr Recovery (%)',
+                    data: analysisData.recovery.individual_furnaces.map(f => f.cr_recovery_pct),
+                    backgroundColor: 'rgba(79, 172, 254, 0.6)',
+                    borderColor: 'rgba(79, 172, 254, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Chromium Recovery Percentage by Furnace'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 75,
+                        max: 95
+                    }
+                }
+            }
+        });
+
+        // Recovery Comparison
+        const recoveryComparison = document.getElementById('recoveryComparison');
+        recoveryComparison.innerHTML = '<h3 style="margin-bottom: 15px; color: #2d3748;">Chromium Recovery Efficiency</h3>' +
+            analysisData.recovery.individual_furnaces.map(f => `
+                <div class="furnace-row">
+                    <div class="furnace-label">Furnace ${f.furnace}</div>
+                    <div class="furnace-bar-container">
+                        <div class="furnace-bar" style="width: ${f.cr_recovery_pct}%; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);">
+                            ${f.cr_recovery_pct.toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="furnace-value">${f.sp_cr_ore_kg.toFixed(0)} kg ore</div>
+                </div>
+            `).join('');
+
+        // Operational Metrics
+        const operationalMetrics = document.getElementById('operationalMetrics');
+        operationalMetrics.innerHTML = `
+            <div class="metric">
+                <div class="metric-label">OEE (TD)</div>
+                <div class="metric-value">${analysisData.operational.plant_metrics.oee_pct.toFixed(2)}<span class="metric-unit">%</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">OEE (MTD)</div>
+                <div class="metric-value">${analysisData.operational.plant_metrics.mtd_oee_pct.toFixed(2)}<span class="metric-unit">%</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Downtime (TD)</div>
+                <div class="metric-value">${analysisData.operational.plant_metrics.downtime_hours.toFixed(2)}<span class="metric-unit">hrs</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Total Batches</div>
+                <div class="metric-value">${analysisData.operational.plant_metrics.total_batches.toFixed(0)}<span class="metric-unit"></span></div>
+            </div>
+        `;
+
+        // Operational Chart
+        const operationalChartCtx = document.getElementById('operationalChart').getContext('2d');
+        new Chart(operationalChartCtx, {
+            type: 'radar',
+            data: {
+                labels: analysisData.operational.individual_furnaces.map(f => 'Furnace ' + f.furnace),
+                datasets: [{
+                    label: 'OEE %',
+                    data: analysisData.operational.individual_furnaces.map(f => f.oee_pct),
+                    backgroundColor: 'rgba(67, 233, 123, 0.2)',
+                    borderColor: 'rgba(67, 233, 123, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Overall Equipment Effectiveness (OEE) by Furnace'
+                    }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+
+        // Operational Comparison
+        const operationalComparison = document.getElementById('operationalComparison');
+        operationalComparison.innerHTML = '<h3 style="margin-bottom: 15px; color: #2d3748;">Batch Processing Efficiency</h3>' +
+            analysisData.operational.individual_furnaces.map(f => `
+                <div class="furnace-row">
+                    <div class="furnace-label">Furnace ${f.furnace}</div>
+                    <div class="furnace-bar-container">
+                        <div class="furnace-bar" style="width: ${(f.batches / analysisData.operational.plant_metrics.total_batches * 100)}%; background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%);">
+                            ${(f.batches / analysisData.operational.plant_metrics.total_batches * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="furnace-value">${f.batches.toFixed(0)} batches</div>
+                </div>
+            `).join('');
+
+        // Tapping Metrics
+        const tappingMetrics = document.getElementById('tappingMetrics');
+        tappingMetrics.innerHTML = `
+            <div class="metric">
+                <div class="metric-label">Total Taps</div>
+                <div class="metric-value">${analysisData.tapping.overall_stats.total_taps}<span class="metric-unit"></span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Total Metal Out</div>
+                <div class="metric-value">${analysisData.tapping.overall_stats.total_metal_out.toFixed(0)}<span class="metric-unit">units</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Total Slag Out</div>
+                <div class="metric-value">${analysisData.tapping.overall_stats.total_slag_out.toFixed(0)}<span class="metric-unit">units</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Avg TTI</div>
+                <div class="metric-value">${analysisData.tapping.overall_stats.avg_tti_mwh.toFixed(2)}<span class="metric-unit">MWH</span></div>
+            </div>
+        `;
+
+        // Tapping Chart
+        const tappingChartCtx = document.getElementById('tappingChart').getContext('2d');
+        new Chart(tappingChartCtx, {
+            type: 'bar',
+            data: {
+                labels: analysisData.tapping.individual_furnaces.map(f => 'Furnace ' + f.furnace),
+                datasets: [{
+                    label: 'Metal Out',
+                    data: analysisData.tapping.individual_furnaces.map(f => f.total_metal_out),
+                    backgroundColor: 'rgba(250, 112, 154, 0.6)',
+                    borderColor: 'rgba(250, 112, 154, 1)',
+                    borderWidth: 2
+                }, {
+                    label: 'Slag Out',
+                    data: analysisData.tapping.individual_furnaces.map(f => f.total_slag_out),
+                    backgroundColor: 'rgba(254, 225, 64, 0.6)',
+                    borderColor: 'rgba(254, 225, 64, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Tapping Operations: Metal vs Slag Output'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Tapping Comparison
+        const tappingComparison = document.getElementById('tappingComparison');
+        tappingComparison.innerHTML = analysisData.tapping.individual_furnaces.map(f => `
+            <div class="furnace-row">
+                <div class="furnace-label">Furnace ${f.furnace}</div>
+                <div class="furnace-bar-container">
+                    <div class="furnace-bar" style="width: ${(f.total_taps / analysisData.tapping.overall_stats.total_taps * 100)}%; background: linear-gradient(90deg, #fa709a 0%, #fee140 100%);">
+                        ${f.total_taps} taps
+                    </div>
+                </div>
+                <div class="furnace-value">Avg: ${f.avg_tti_mwh.toFixed(2)} MWH</div>
+            </div>
+        `).join('');
+
+        // Slag Metrics
+        const slagMetrics = document.getElementById('slagMetrics');
+        slagMetrics.innerHTML = `
+            <div class="metric">
+                <div class="metric-label">Total Slag (TD)</div>
+                <div class="metric-value">${analysisData.slag.plant_metrics.slag_mt.toFixed(2)}<span class="metric-unit">MT</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Metal-Slag Ratio</div>
+                <div class="metric-value">${analysisData.slag.plant_metrics.metal_slag_ratio.toFixed(3)}<span class="metric-unit"></span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Cr₂O₃ in Slag</div>
+                <div class="metric-value">${analysisData.slag.plant_metrics.cr2o3_in_slag_pct.toFixed(2)}<span class="metric-unit">%</span></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Total Slag (MTD)</div>
+                <div class="metric-value">${analysisData.slag.plant_metrics.mtd_slag_mt.toFixed(1)}<span class="metric-unit">MT</span></div>
+            </div>
+        `;
+
+        // Slag Chart
+        const slagChartCtx = document.getElementById('slagChart').getContext('2d');
+        new Chart(slagChartCtx, {
+            type: 'bar',
+            data: {
+                labels: analysisData.slag.individual_furnaces.map(f => 'Furnace ' + f.furnace),
+                datasets: [{
+                    label: 'Metal-Slag Ratio',
+                    data: analysisData.slag.individual_furnaces.map(f => f.metal_slag_ratio),
+                    backgroundColor: 'rgba(48, 207, 208, 0.6)',
+                    borderColor: 'rgba(48, 207, 208, 1)',
+                    borderWidth: 2,
+                    yAxisID: 'y'
+                }, {
+                    label: 'Cr₂O₃ in Slag (%)',
+                    data: analysisData.slag.individual_furnaces.map(f => f.cr2o3_in_slag_pct),
+                    backgroundColor: 'rgba(51, 8, 103, 0.6)',
+                    borderColor: 'rgba(51, 8, 103, 1)',
+                    borderWidth: 2,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Slag Quality Metrics by Furnace'
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Metal-Slag Ratio'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Cr₂O₃ %'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // Generate Insights
+        const insightsContainer = document.getElementById('insightsContainer');
+        
+        // Calculate key findings
+        const topProducer = analysisData.production.individual_furnaces.reduce((a, b) => a.td_actual > b.td_actual ? a : b);
+        const lowestProducer = analysisData.production.individual_furnaces.reduce((a, b) => a.td_actual < b.td_actual ? a : b);
+        const bestRecovery = analysisData.recovery.individual_furnaces.reduce((a, b) => a.cr_recovery_pct > b.cr_recovery_pct ? a : b);
+        const worstRecovery = analysisData.recovery.individual_furnaces.reduce((a, b) => a.cr_recovery_pct < b.cr_recovery_pct ? a : b);
+        const bestOEE = analysisData.operational.individual_furnaces.reduce((a, b) => a.oee_pct > b.oee_pct ? a : b);
+        const worstOEE = analysisData.operational.individual_furnaces.reduce((a, b) => a.oee_pct < b.oee_pct ? a : b);
+
+        // Handle null td_plan for date ranges
+        const hasPlan = analysisData.production.plant_total.td_plan !== null && analysisData.production.plant_total.td_plan !== undefined;
+        const plantProductionRate = hasPlan ? (analysisData.production.plant_total.td_actual / analysisData.production.plant_total.td_plan * 100) : null;
+        const avgCrRecovery = analysisData.recovery.plant_avg.cr_recovery_pct;
+
+        insightsContainer.innerHTML = `
+            ${hasPlan && plantProductionRate >= 98 ? `
+                <div class="success-highlight">
+                    <div class="success-title">✅ Strong Performance Highlights</div>
+                    <div class="success-item">🎯 <strong>Plant achieved ${plantProductionRate.toFixed(1)}% of production target</strong> with ${analysisData.production.plant_total.td_actual.toFixed(1)} MT produced vs ${analysisData.production.plant_total.td_plan.toFixed(1)} MT planned</div>
+                    <div class="success-item">⚡ <strong>Furnace ${bestOEE.furnace} achieved exceptional ${bestOEE.oee_pct.toFixed(1)}% OEE</strong>, demonstrating operational excellence with zero downtime</div>
+                    <div class="success-item">🔬 <strong>Furnace ${bestRecovery.furnace} leads in Chromium recovery at ${bestRecovery.cr_recovery_pct.toFixed(1)}%</strong>, significantly above plant average</div>
+                </div>
+            ` : hasPlan ? `
+                <div class="critical-alert">
+                    <div class="critical-title">⚠️ Critical Performance Gaps</div>
+                    <div class="critical-item">📉 <strong>Plant underperformed at ${plantProductionRate.toFixed(1)}% of target</strong> - Missing ${Math.abs(analysisData.production.plant_total.td_variance).toFixed(1)} MT from planned production</div>
+                    <div class="critical-item">🔴 <strong>MTD production deficit: ${Math.abs(analysisData.production.plant_total.mtd_variance).toFixed(1)} MT</strong> - Requires immediate corrective action</div>
+                </div>
+            ` : ''}
+
+            <div class="insights-section">
+                <div class="insights-title">💡 Key Operational Insights</div>
+                <div class="insight-item">
+                    <span class="insight-icon">🏭</span>
+                    <div>
+                        <strong>Production Variability:</strong> Furnace ${topProducer.furnace} produced ${topProducer.td_actual.toFixed(1)} MT (highest) while Furnace ${lowestProducer.furnace} produced ${lowestProducer.td_actual.toFixed(1)} MT (lowest). 
+                        The ${((topProducer.td_actual - lowestProducer.td_actual) / lowestProducer.td_actual * 100).toFixed(1)}% difference suggests potential optimization opportunities.
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">⚡</span>
+                    <div>
+                        <strong>Power Efficiency Analysis:</strong> Plant consumed ${fmt(analysisData.power.plant_total.td_actual, 1)} MWH${analysisData.power.plant_total.td_plan !== null ? ` against planned ${fmt(analysisData.power.plant_total.td_plan, 1)} MWH` : ''}.
+                        Specific power consumption averaged ${fmt(analysisData.power.plant_total.sp_power_kwh, 0)} kWh/MT.
+                        ${analysisData.power.plant_total.td_plan !== null && analysisData.power.plant_total.td_actual > analysisData.power.plant_total.td_plan ?
+                            'Power consumption exceeded plan - investigate efficiency losses.' :
+                            analysisData.power.plant_total.td_plan !== null ? 'Power consumption within plan - good efficiency control.' : ''}
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">🔬</span>
+                    <div>
+                        <strong>Chromium Recovery Gap:</strong> Recovery ranged from ${worstRecovery.cr_recovery_pct.toFixed(1)}% (Furnace ${worstRecovery.furnace}) to ${bestRecovery.cr_recovery_pct.toFixed(1)}% (Furnace ${bestRecovery.furnace}). 
+                        The ${(bestRecovery.cr_recovery_pct - worstRecovery.cr_recovery_pct).toFixed(1)}% gap represents significant material loss potential. 
+                        ${worstRecovery.cr_recovery_pct < 85 ? 'Furnace ' + worstRecovery.furnace + ' requires urgent process investigation.' : ''}
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">✅</span>
+                    <div>
+                        <strong>Operational Excellence:</strong> Plant OEE at ${analysisData.operational.plant_metrics.oee_pct.toFixed(1)}% (TD) and ${analysisData.operational.plant_metrics.mtd_oee_pct.toFixed(1)}% (MTD). 
+                        ${analysisData.operational.plant_metrics.downtime_hours === 0 ? 
+                            'Zero downtime achieved on this day - excellent!' : 
+                            `Downtime: ${analysisData.operational.plant_metrics.downtime_hours.toFixed(2)} hours recorded.`}
+                        MTD cumulative downtime: ${analysisData.operational.plant_metrics.mtd_downtime_hours.toFixed(2)} hours.
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">🔥</span>
+                    <div>
+                        <strong>Tapping Efficiency:</strong> ${analysisData.tapping.overall_stats.total_taps} tapping operations completed across all furnaces. 
+                        Metal-to-slag output ratio varies by furnace, with best practice at Furnace II (${(analysisData.tapping.individual_furnaces[1].metal_slag_ratio * 100).toFixed(1)}% metal recovery). 
+                        Average TTI of ${analysisData.tapping.overall_stats.avg_tti_mwh.toFixed(2)} MWH indicates consistent tap-to-tap intervals.
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">🧪</span>
+                    <div>
+                        <strong>Slag Quality Control:</strong> Plant metal-slag ratio of ${analysisData.slag.plant_metrics.metal_slag_ratio.toFixed(3)} with ${analysisData.slag.plant_metrics.cr2o3_in_slag_pct.toFixed(2)}% Cr₂O₃ in slag. 
+                        Lower Cr₂O₃ percentages indicate better chromium extraction efficiency. 
+                        ${analysisData.slag.plant_metrics.cr2o3_in_slag_pct < 8 ? 
+                            'Current levels are within acceptable limits.' : 
+                            'Elevated Cr₂O₃ in slag suggests recovery optimization needed.'}
+                    </div>
+                </div>
+            </div>
+
+            ${worstRecovery.cr_recovery_pct < 82 || worstOEE.mtd_oee_pct < 90 ? `
+                <div class="critical-alert">
+                    <div class="critical-title">🚨 Immediate Action Required</div>
+                    ${worstRecovery.cr_recovery_pct < 82 ? `
+                        <div class="critical-item">• <strong>Furnace ${worstRecovery.furnace}:</strong> Chromium recovery at ${worstRecovery.cr_recovery_pct.toFixed(1)}% - investigate raw material quality, charging practices, and temperature control</div>
+                    ` : ''}
+                    ${worstOEE.mtd_oee_pct < 90 ? `
+                        <div class="critical-item">• <strong>Furnace ${worstOEE.furnace}:</strong> MTD OEE at ${worstOEE.mtd_oee_pct.toFixed(1)}% - review maintenance schedules and operational procedures to improve availability</div>
+                    ` : ''}
+                    ${analysisData.production.plant_total.mtd_variance < -300 ? `
+                        <div class="critical-item">• <strong>Plant Production:</strong> Significant MTD shortfall of ${Math.abs(analysisData.production.plant_total.mtd_variance).toFixed(0)} MT threatens monthly targets - implement recovery plan</div>
+                    ` : ''}
+                </div>
+            ` : ''}
+
+            <div class="insights-section">
+                <div class="insights-title">📈 Recommended Actions</div>
+                <div class="insight-item">
+                    <span class="insight-icon">1️⃣</span>
+                    <div><strong>Standardize Best Practices:</strong> Replicate Furnace ${bestRecovery.furnace}'s chromium recovery protocols (${bestRecovery.cr_recovery_pct.toFixed(1)}%) across all furnaces to improve plant average</div>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">2️⃣</span>
+                    <div><strong>Power Optimization:</strong> Investigate specific power consumption variations - target average below ${(analysisData.power.plant_total.sp_power_kwh - 50).toFixed(0)} kWh/MT through process improvements</div>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">3️⃣</span>
+                    <div><strong>Production Balancing:</strong> Redistribute load to optimize capacity utilization - consider increasing throughput on high-efficiency furnaces</div>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">4️⃣</span>
+                    <div><strong>Preventive Maintenance:</strong> Schedule targeted maintenance for furnaces with declining MTD performance to prevent further degradation</div>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">5️⃣</span>
+                    <div><strong>Raw Material Quality:</strong> Review chromite ore specifications and carbon quality to ensure consistent feed quality across all furnaces</div>
+                </div>
+            </div>
+        `;
+    </script>
+</body>
+</html>

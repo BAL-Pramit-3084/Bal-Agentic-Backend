@@ -1,0 +1,226 @@
+# ============================================================================
+# Balasore Alloys Dashboard - .gitignore
+# ============================================================================
+
+# ============================================================================
+# SENSITIVE FILES - NEVER COMMIT
+# ============================================================================
+
+# Environment variables with secrets
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Database credentials
+config/database.json
+config/secrets.json
+
+# API Keys
+**/api_keys.txt
+**/secrets.txt
+
+# ============================================================================
+# PYTHON
+# ============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# ============================================================================
+# GENERATED DASHBOARDS & OUTPUT
+# ============================================================================
+
+# Generated HTML dashboards (these are temporary)
+generated_dashboards/*.html
+!generated_dashboards/.gitkeep
+
+# Test outputs
+test_output/*.html
+test_outputs/*.html
+here-is-output/*.html
+!test_output/.gitkeep
+!test_outputs/.gitkeep
+!here-is-output/.gitkeep
+
+# Logs
+logs/*.log
+*.log
+!logs/.gitkeep
+
+# ============================================================================
+# IDE & EDITOR
+# ============================================================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================================================
+# OPERATING SYSTEM
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================================================
+# PROJECT-SPECIFIC
+# ============================================================================
+
+# Temporary test scripts (keep permanent tests)
+test_*.py
+!tests/test_*.py
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+data/*.csv
+data/*.xlsx
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+id_dsa*
+
+# Database dumps
+*.sql
+*.dump
+*.db
+*.sqlite
+*.sqlite3
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# ============================================================================
+# KEEP THESE FILES
+# ============================================================================
+
+# Keep template files
+!templates/*.html
+!templates/**/*.html
+
+# Keep department structure
+!departments/*/
+!departments/*/*.py
+!departments/*/README.md
+
+# Keep configuration templates
+!config_modules/*.py
+
+# Keep documentation
+!docs/
+!*.md
+!README.md
+!CONTRIBUTING.md
+!LICENSE
+
+# ============================================================================
+# NOTES FOR CONTRIBUTORS
+# ============================================================================
+#
+# If you need to add generated files for testing:
+# 1. Add them to test_output/ folder (gitignored)
+# 2. Reference them in your PR description
+# 3. Do NOT commit to generated_dashboards/
+#
+# If you need to commit a new Python file:
+# 1. Ensure it's in your department folder: departments/<your-dept>/
+# 2. Add appropriate docstrings and comments
+# 3. Run: git add departments/<your-dept>/new_file.py
+#
+# ============================================================================
+nul

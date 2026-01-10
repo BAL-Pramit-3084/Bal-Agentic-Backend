@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom utility classes */
+.btn-bal {
+  @apply bg-balBlue text-white rounded-lg;
+}
+
+.btn-ghost {
+  @apply bg-white border border-gray-200 text-textDark;
+}
+
+.card {
+  @apply bg-white rounded-card shadow-card;
+}
+
+.chat-btn {
+  @apply bg-balBlue text-white rounded-xl shadow-chatbtn;
+}

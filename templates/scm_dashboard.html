@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCM Daily Report - November 18, 2025 | Balasore Alloys</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header .date-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .alert-banner {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+        
+        .alert-banner h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .metric-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .metric-card h3 {
+            color: #34495e;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .metric-value {
+            font-size: 2.8em;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .metric-label {
+            color: #7f8c8d;
+            font-size: 0.95em;
+        }
+        
+        .metric-trend {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .trend-danger {
+            background: #fee;
+            color: #c0392b;
+        }
+        
+        .trend-warning {
+            background: #ffeaa7;
+            color: #d63031;
+        }
+        
+        .trend-success {
+            background: #dfe6e9;
+            color: #27ae60;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-container h2 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+        }
+        
+        .data-table {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+        
+        .data-table h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .insights-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .insights-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        
+        .insight-item {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+        
+        .insight-critical {
+            border-left-color: #e74c3c;
+            background: #fee;
+        }
+        
+        .insight-warning {
+            border-left-color: #f39c12;
+            background: #fef5e7;
+        }
+        
+        .insight-info {
+            border-left-color: #3498db;
+            background: #ebf5fb;
+        }
+        
+        .insight-success {
+            border-left-color: #27ae60;
+            background: #d4edda;
+        }
+        
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            color: #7f8c8d;
+            margin-top: 25px;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .chart-wrapper {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📅 SCM Daily Activity Report</h1>
+        <div class="date-badge">Monday, November 18, 2025</div>
+        <div style="color: #95a5a6; font-size: 0.9em; margin-top: 15px;">
+            Balasore Alloys Limited | Single Day Procurement Analysis
+        </div>
+    </div>
+
+    <div class="alert-banner">
+        <h2>⚠️ Daily Highlights</h2>
+        <ul style="list-style: none; padding: 0; margin-top: 10px;">
+            <li style="padding: 5px 0;">✓ <strong>10 Purchase Orders</strong> created totaling <strong>₹1.64 Cr</strong></li>
+            <li style="padding: 5px 0;">⚠️ <strong>100% Pending Delivery:</strong> All orders from today are pending delivery</li>
+            <li style="padding: 5px 0;">⚠️ <strong>Low PR Conversion:</strong> Only 2 of 14 PRs converted to PO (14.3%)</li>
+            <li style="padding: 5px 0;">📊 <strong>Single Large Order:</strong> ₹1.51 Cr Semi-Coke order dominates (92% of value)</li>
+        </ul>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="metric-card">
+            <h3>Purchase Orders Created</h3>
+            <div class="metric-value">10</div>
+            <div class="metric-label">29 line items</div>
+            <div class="metric-trend trend-success">Normal Activity</div>
+        </div>
+        
+        <div class="metric-card">
+            <h3>Total PO Value</h3>
+            <div class="metric-value">₹1.64 Cr</div>
+            <div class="metric-label">Average: ₹5.65 Lakh/item</div>
+            <div class="metric-trend trend-warning">1 Large Order</div>
+        </div>
+        
+        <div class="metric-card">
+            <h3>Purchase Requisitions</h3>
+            <div class="metric-value">12</div>
+            <div class="metric-label">14 line items created</div>
+            <div class="metric-trend trend-warning">Only 2 Converted</div>
+        </div>
+        
+        <div class="metric-card">
+            <h3>Vendors Engaged</h3>
+            <div class="metric-value">10</div>
+            <div class="metric-label">Unique vendors</div>
+            <div class="metric-trend trend-success">Good Diversity</div>
+        </div>
+        
+        <div class="metric-card">
+            <h3>Delivery Status</h3>
+            <div class="metric-value">100%</div>
+            <div class="metric-label">All items pending</div>
+            <div class="metric-trend trend-danger">₹1.64 Cr Pending</div>
+        </div>
+        
+        <div class="metric-card">
+            <h3>Active Buyers</h3>
+            <div class="metric-value">8</div>
+            <div class="metric-label">Purchasing groups</div>
+            <div class="metric-trend trend-success">Good Distribution</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h2>💰 PO Value Distribution by Vendor</h2>
+        <div class="chart-wrapper">
+            <canvas id="vendorChart"></canvas>
+        </div>
+    </div>
+
+    <div class="data-table">
+        <h2>📦 Purchase Orders Created on November 18, 2025</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>PO Number</th>
+                    <th>Vendor</th>
+                    <th>Material</th>
+                    <th>Quantity</th>
+                    <th>Value (₹)</th>
+                    <th>Buyer</th>
+                    <th>Plant</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background: #fff3cd;">
+                    <td><strong>4100001544</strong></td>
+                    <td>MORTEX INDIA</td>
+                    <td>SEMI-COKE (Reductant)</td>
+                    <td>700 TO</td>
+                    <td><strong>₹1,50,50,000</strong></td>
+                    <td>P19 (Aryadipta Dash)</td>
+                    <td>Balasore Plant</td>
+                </tr>
+                <tr>
+                    <td>4300001830</td>
+                    <td>INFOTEK SERVICES</td>
+                    <td>Network Equipment (2 items)</td>
+                    <td>6 EA + 12 EA</td>
+                    <td>₹9,70,254</td>
+                    <td>P11 (Deepak Kaibart)</td>
+                    <td>Balasore Plant</td>
+                </tr>
+                <tr>
+                    <td>4300001829</td>
+                    <td>M G ENGINEERS</td>
+                    <td>HVLS Fan - 14 FT</td>
+                    <td>1 EA</td>
+                    <td>₹1,30,000</td>
+                    <td>P28 (Nihar Patra)</td>
+                    <td>Balasore Plant</td>
+                </tr>
+                <tr>
+                    <td>4500018725/26</td>
+                    <td>KALZEM / ADITYA ENT</td>
+                    <td>Leather Canvas Gloves</td>
+                    <td>1000 + 1000 PAA</td>
+                    <td>₹88,000</td>
+                    <td>P16 (SK Mondal)</td>
+                    <td>Balasore Plant</td>
+                </tr>
+                <tr>
+                    <td>4500018722</td>
+                    <td>KALINGA AUTOMOBILE</td>
+                    <td>JCB Spares (9 items)</td>
+                    <td>Various</td>
+                    <td>₹51,918</td>
+                    <td>P26 (Nitesh Kumar)</td>
+                    <td>Kaliapani Mines</td>
+                </tr>
+                <tr>
+                    <td>4500018724</td>
+                    <td>ASSOCIATED AGENCIES</td>
+                    <td>Mechanical Parts (5 items)</td>
+                    <td>Various</td>
+                    <td>₹29,512</td>
+                    <td>P16 (SK Mondal)</td>
+                    <td>Balasore Plant</td>
+                </tr>
+                <tr>
+                    <td>4500018723</td>
+                    <td>Applied Engg Services</td>
+                    <td>Hydraulic Coupler</td>
+                    <td>3 EA</td>
+                    <td>₹22,515</td>
+                    <td>P10 (C C Karan)</td>
+                    <td>Balasore Plant</td>
+                </tr>
+                <tr>
+                    <td>4500018721</td>
+                    <td>DEEPAK TRADING</td>
+                    <td>Welding Consumables (6 items)</td>
+                    <td>Various</td>
+                    <td>₹22,850</td>
+                    <td>P07 (Ahmed Mazumder)</td>
+                    <td>Kaliapani COB</td>
+                </tr>
+                <tr>
+                    <td>4700004075</td>
+                    <td>Miscellaneous Vendor</td>
+                    <td>Broom Sticks</td>
+                    <td>200 EA</td>
+                    <td>₹8,000</td>
+                    <td>P14 (Chandan Das)</td>
+                    <td>Balasore Plant</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="chart-container">
+        <h2>🏭 PO Distribution by Plant</h2>
+        <div class="chart-wrapper">
+            <canvas id="plantChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h2>📊 Material Category Breakdown</h2>
+        <div class="chart-wrapper">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+
+    <div class="data-table">
+        <h2>📋 Purchase Requisitions Created on November 18, 2025</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>PR Number</th>
+                    <th>Description</th>
+                    <th>Value (₹)</th>
+                    <th>Status</th>
+                    <th>PO Created</th>
+                    <th>Requisitioner</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background: #d4edda;">
+                    <td>1500000331</td>
+                    <td>HVLS Fan - 14 FT Blade</td>
+                    <td>₹1,30,000</td>
+                    <td>✅ Converted</td>
+                    <td>4300001829</td>
+                    <td>SUBODH_1426</td>
+                    <td>Electrical Install</td>
+                </tr>
+                <tr style="background: #d4edda;">
+                    <td>1400002776</td>
+                    <td>HT Cable Jointing</td>
+                    <td>₹30,000</td>
+                    <td>✅ Converted</td>
+                    <td>4800015560</td>
+                    <td>KAMAL_1341</td>
+                    <td>Electrical Install</td>
+                </tr>
+                <tr style="background: #fff3cd;">
+                    <td>1200000040</td>
+                    <td>Mudgun & Taphole Drilling</td>
+                    <td>₹0</td>
+                    <td>⏳ Pending</td>
+                    <td>-</td>
+                    <td>G Shatapathy</td>
+                    <td>Plant & Machinery</td>
+                </tr>
+                <tr style="background: #fff3cd;">
+                    <td>1400002777</td>
+                    <td>HT Cable Shifting</td>
+                    <td>₹0</td>
+                    <td>⏳ Pending</td>
+                    <td>-</td>
+                    <td>KAMAL_1341</td>
+                    <td>Electrical Install</td>
+                </tr>
+                <tr style="background: #fff3cd;">
+                    <td>1400002778</td>
+                    <td>Manpower for Admin</td>
+                    <td>₹0</td>
+                    <td>⏳ Pending</td>
+                    <td>-</td>
+                    <td>PARESH_2868</td>
+                    <td>Manpower Services</td>
+                </tr>
+                <tr style="background: #fff3cd;">
+                    <td>1400002779</td>
+                    <td>Professional Services (RRA)</td>
+                    <td>₹0</td>
+                    <td>⏳ Pending</td>
+                    <td>-</td>
+                    <td>TARUN_2736</td>
+                    <td>Consultancy</td>
+                </tr>
+                <tr style="background: #fff3cd;">
+                    <td>1400002780</td>
+                    <td>Rest Room Cushions</td>
+                    <td>₹0</td>
+                    <td>⏳ Pending</td>
+                    <td>-</td>
+                    <td>ASWINI_2939</td>
+                    <td>Staff Welfare</td>
+                </tr>
+                <tr style="background: #fff3cd;">
+                    <td>1400002781</td>
+                    <td>Tax Audit Fees FY 24-25</td>
+                    <td>₹0</td>
+                    <td>⏳ Pending</td>
+                    <td>-</td>
+                    <td>TARUN_2736</td>
+                    <td>Consultancy</td>
+                </tr>
+                <tr style="background: #fff3cd;">
+                    <td>1500000330</td>
+                    <td>Slurry Pump</td>
+                    <td>₹0</td>
+                    <td>⏳ Pending</td>
+                    <td>-</td>
+                    <td>TAPAS_2880</td>
+                    <td>Mechanical Spares</td>
+                </tr>
+                <tr style="background: #fff3cd;">
+                    <td>1600003457/59</td>
+                    <td>MS Plates (20mm & 16mm)</td>
+                    <td>₹0</td>
+                    <td>⏳ Pending</td>
+                    <td>-</td>
+                    <td>GAJENDR_1095</td>
+                    <td>Steel Materials</td>
+                </tr>
+                <tr style="background: #fff3cd;">
+                    <td>1600003458</td>
+                    <td>Digital MD Controller</td>
+                    <td>₹0</td>
+                    <td>⏳ Pending</td>
+                    <td>-</td>
+                    <td>PAVAN_2952</td>
+                    <td>Electronics</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="insights-section">
+        <h2>🔍 Key Insights for November 18, 2025</h2>
+        
+        <div class="insight-item insight-critical">
+            <h3>1. Single Large Order Dominance</h3>
+            <p><strong>Finding:</strong> One Semi-Coke order from MORTEX INDIA accounts for ₹1.51 Cr (92% of day's total value).</p>
+            <p><strong>Details:</strong> 700 Tonnes ordered by P19 (Aryadipta Dash) for Balasore Plant, priced at ₹21,500 per tonne.</p>
+            <p><strong>Risk:</strong> High dependency on single vendor (MORTEX) with historical 100% pending track record.</p>
+            <p><strong>Recommendation:</strong> Monitor delivery closely, have backup vendor ready given MORTEX's poor delivery history.</p>
+        </div>
+        
+        <div class="insight-item insight-warning">
+            <h3>2. Low PR to PO Conversion on Same Day</h3>
+            <p><strong>Finding:</strong> Only 2 of 14 PRs created today were converted to PO (14.3% conversion rate).</p>
+            <p><strong>Details:</strong> Both converted PRs were for Electrical Installation work - quick approval and processing.</p>
+            <p><strong>Pattern:</strong> 12 PRs remain unconverted with ₹0 value assigned (value estimation pending).</p>
+            <p><strong>Recommendation:</strong> Fast-track value estimation for pending PRs to enable quicker conversion.</p>
+        </div>
+        
+        <div class="insight-item insight-warning">
+            <h3>3. 100% Pending Delivery for Today's Orders</h3>
+            <p><strong>Finding:</strong> All 29 line items from today's 10 POs are marked as pending delivery (100%).</p>
+            <p><strong>Expected:</strong> This is normal for same-day POs, but needs monitoring given recent delivery issues.</p>
+            <p><strong>Total at Risk:</strong> ₹1.64 Cr in orders from today.</p>
+            <p><strong>Recommendation:</strong> Add today's orders to delivery tracking dashboard, follow up within 7 days.</p>
+        </div>
+        
+        <div class="insight-item insight-success">
+            <h3>4. Good Vendor and Buyer Diversity</h3>
+            <p><strong>Finding:</strong> 10 unique vendors engaged through 8 different buying groups.</p>
+            <p><strong>Distribution:</strong> No single buyer dominated - healthy workload spread.</p>
+            <p><strong>Categories:</strong> Mix of critical materials (Reductant), maintenance (Spares), and consumables (Gloves, Brooms).</p>
+            <p><strong>Positive Sign:</strong> Procurement team actively managing diverse requirements.</p>
+        </div>
+        
+        <div class="insight-item insight-info">
+            <h3>5. Plant-wise Activity Distribution</h3>
+            <p><strong>Balasore Plant:</strong> 7 POs (₹1.61 Cr) - 98% of total value (dominated by Semi-Coke order)</p>
+            <p><strong>Kaliapani Mines:</strong> 1 PO (₹0.52 Lakh) - JCB spare parts for mining operations</p>
+            <p><strong>Kaliapani COB:</strong> 1 PO (₹0.23 Lakh) - Welding consumables</p>
+            <p><strong>Observation:</strong> Balasore Plant remains procurement hub, mines orders are relatively small routine maintenance.</p>
+        </div>
+        
+        <div class="insight-item insight-info">
+            <h3>6. Material Category Highlights</h3>
+            <p><strong>Reductant (92% of value):</strong> Critical production material - Semi-Coke for furnace operations</p>
+            <p><strong>Spares & Consumables:</strong> JCB parts, mechanical spares, network equipment, safety gloves</p>
+            <p><strong>Services:</strong> Electrical installation, HT cable work (both PRs converted same day)</p>
+            <p><strong>Balance:</strong> Good mix of critical production materials and routine operational needs</p>
+        </div>
+        
+        <div class="insight-item insight-success">
+            <h3>7. Quick PR-to-PO Conversion for Electrical Work</h3>
+            <p><strong>Best Practice Identified:</strong> Both Electrical Installation PRs converted to PO same day.</p>
+            <p><strong>PR 1500000331:</strong> HVLS Fan (₹1.3L) - Created & converted same day by SUBODH_1426</p>
+            <p><strong>PR 1400002776:</strong> HT Cable work (₹30K) - Created & converted same day by KAMAL_1341</p>
+            <p><strong>Key Success Factor:</strong> Well-defined scope, pre-approved vendors, urgent operational need enabled quick processing.</p>
+        </div>
+    </div>
+
+    <div class="insights-section">
+        <h2>📈 Daily Performance vs. Historical Context</h2>
+        
+        <div class="insight-item insight-info">
+            <h3>November 18 Activity in Context</h3>
+            <p><strong>PO Volume:</strong> 10 POs is slightly below November 2025 average (85 POs / 18 working days = ~4.7 POs/day expected, but actual varies widely)</p>
+            <p><strong>PO Value:</strong> ₹1.64 Cr is below November 2025 average (₹285.8 Cr / 18 days = ₹15.9 Cr/day expected)</p>
+            <p><strong>Why Lower:</strong> Single large order accounts for 92% of value - no other high-value orders on this day</p>
+            <p><strong>Pattern:</strong> Normal daily fluctuation - procurement tends to be lumpy with large orders on some days, small routine orders on others</p>
+        </div>
+    </div>
+
+    <div class="insights-section">
+        <h2>✅ Action Items for November 19, 2025</h2>
+        
+        <div class="insight-item insight-warning">
+            <h3>Immediate Follow-up Required</h3>
+            <ol style="margin-left: 20px; margin-top: 10px;">
+                <li><strong>MORTEX INDIA Semi-Coke Order (₹1.51 Cr):</strong> Schedule delivery date, obtain delivery schedule within 48 hours. Given vendor's historical 100% pending rate, escalate to senior buyer if no response.</li>
+                <li><strong>12 Pending PRs from Nov 18:</strong> Expedite value estimation and vendor selection. Target: Convert at least 50% by end of week.</li>
+                <li><strong>Network Equipment (INFOTEK):</strong> ₹9.7 Lakh order - confirm delivery timeline for 24-port switches and SFP modules. Critical for IT infrastructure.</li>
+                <li><strong>JCB Spares (Kaliapani Mines):</strong> Ensure delivery within 2 weeks to avoid mining equipment downtime.</li>
+                <li><strong>Add to Weekly Review:</strong> All 10 POs from Nov 18 should be added to next week's delivery tracking review.</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p><strong>Report Date:</strong> November 18, 2025 (Single Day Analysis)</p>
+        <p style="margin-top: 10px;"><strong>Data Summary:</strong> 10 Purchase Orders (29 line items) | 12 Purchase Requisitions (14 line items)</p>
+        <p style="margin-top: 10px; font-size: 0.85em;">This report covers procurement activity for November 18, 2025 only</p>
+    </div>
+
+    <script>
+        Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+        
+        // Vendor Distribution Chart
+        const vendorCtx = document.getElementById('vendorChart').getContext('2d');
+        new Chart(vendorCtx, {
+            type: 'bar',
+            data: {
+                labels: ['MORTEX INDIA', 'INFOTEK SERVICES', 'M G ENGINEERS', 'KALZEM/ADITYA', 'KALINGA AUTO', 'ASSOCIATED AG', 'Applied Engg', 'DEEPAK TRADING', 'Misc Vendor'],
+                datasets: [{
+                    label: 'PO Value (₹)',
+                    data: [15050000, 970254, 130000, 88000, 51918, 29512, 22515, 22850, 8000],
+                    backgroundColor: ['#ff6b6b', '#667eea', '#48dbfb', '#1dd1a1', '#feca57', '#ee5a6f', '#764ba2', '#0abde3', '#95a5a6'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'PO Value (₹)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Plant Distribution Chart
+        const plantCtx = document.getElementById('plantChart').getContext('2d');
+        new Chart(plantCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Balasore Plant', 'Kaliapani Mines', 'Kaliapani COB'],
+                datasets: [{
+                    label: 'PO Value',
+                    data: [16100518, 51918, 22850],
+                    backgroundColor: ['#667eea', '#48dbfb', '#1dd1a1'],
+                    borderWidth: 3,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Category Distribution Chart
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Reductant (Semi-Coke)', 'Electronics & Telecom', 'Electrical Install', 'Production Consumables', 'Automobile Spares', 'Mechanical Spares', 'Welding Materials', 'General Consumables'],
+                datasets: [{
+                    label: 'PO Value',
+                    data: [15050000, 970254, 130000, 88000, 51918, 52027, 22850, 8000],
+                    backgroundColor: ['#ff6b6b', '#667eea', '#feca57', '#1dd1a1', '#48dbfb', '#764ba2', '#ee5a6f', '#95a5a6'],
+                    borderWidth: 3,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

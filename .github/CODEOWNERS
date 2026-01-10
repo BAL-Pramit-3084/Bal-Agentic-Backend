@@ -1,0 +1,105 @@
+# ============================================================================
+# Code Owners - Balasore Alloys Dashboard System
+# ============================================================================
+#
+# This file defines who is responsible for reviewing changes to specific
+# parts of the codebase. GitHub will automatically request reviews from
+# the appropriate owners when a Pull Request is created.
+#
+# Format: path/to/file @github-username
+#
+# ============================================================================
+
+# ============================================================================
+# DEFAULT - Tech Lead reviews everything by default
+# ============================================================================
+* @tech-lead
+
+# ============================================================================
+# CORE INFRASTRUCTURE - Requires Tech Lead Approval
+# ============================================================================
+/app_main.py @tech-lead
+/config_modules/ @tech-lead
+/core/ @tech-lead
+/requirements.txt @tech-lead
+/.env.example @tech-lead
+
+# ============================================================================
+# DEPARTMENT OWNERSHIP
+# ============================================================================
+
+# Furnace Department
+/departments/furnace/ @furnace-lead
+/templates/furnace_dashboard.html @furnace-lead
+/tests/test_furnace.py @furnace-lead
+
+# Geology Department
+/departments/geology/ @geology-lead
+/templates/geology_dashboard.html @geology-lead
+/tests/test_geology.py @geology-lead
+
+# Quality Control Department
+/departments/qc/ @qc-lead
+/templates/qc_dashboard.html @qc-lead
+/tests/test_qc.py @qc-lead
+
+# Supply Chain Management Department
+/departments/scm/ @scm-lead
+/templates/scm_dashboard.html @scm-lead
+/tests/test_scm.py @scm-lead
+
+# Automobile Department
+/departments/automobile/ @automobile-lead
+/templates/automobile_dashboard.html @automobile-lead
+/tests/test_automobile.py @automobile-lead
+
+# Customer Relationship Management Department
+/departments/crm/ @crm-lead
+/templates/crm_dashboard.html @crm-lead
+/tests/test_crm.py @crm-lead
+
+# Environment Department
+/departments/env/ @env-lead
+/templates/env_dashboard.html @env-lead
+/tests/test_env.py @env-lead
+
+# ============================================================================
+# SHARED CONFIGURATION - Multiple Reviewers
+# ============================================================================
+/dashboards/department_config.json @tech-lead @furnace-lead @geology-lead @qc-lead @scm-lead @automobile-lead @crm-lead @env-lead
+
+# ============================================================================
+# FRONTEND & TEMPLATES - UI/UX Lead + Tech Lead
+# ============================================================================
+/templates/base.html @ui-ux-lead @tech-lead
+/templates/common/ @ui-ux-lead @tech-lead
+/static/ @ui-ux-lead @tech-lead
+/frontend/ @ui-ux-lead @tech-lead
+
+# ============================================================================
+# AUTHENTICATION & SECURITY - Tech Lead + Security Team
+# ============================================================================
+/auth/ @tech-lead @security-team
+/permissions/ @tech-lead @security-team
+
+# ============================================================================
+# DOCUMENTATION - Anyone can contribute, Tech Lead reviews
+# ============================================================================
+*.md @tech-lead
+/docs/ @tech-lead
+
+# ============================================================================
+# NOTES FOR TEAM
+# ============================================================================
+#
+# How to use:
+# 1. Replace @tech-lead with actual GitHub username (e.g., @john-doe)
+# 2. Replace @furnace-lead with furnace department lead's GitHub username
+# 3. When creating PR, GitHub will auto-assign reviewers based on files changed
+#
+# Examples:
+# - PR changes only departments/furnace/ → Auto-assigns @furnace-lead
+# - PR changes app_main.py → Auto-assigns @tech-lead
+# - PR changes department_config.json → Assigns ALL department leads
+#
+# ============================================================================

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Internal Admin Panel</title>
+
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --card-bg: #ffffff;
+      --text-dark: #111827;
+      --muted: #6b7280;
+      --accent: #0066D6;
+      --danger: #E53935;
+      --border-color: #e6eef6;
+    }
+
+    body {
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: #f6f7fb;
+      color: var(--text-dark);
+      margin: 0;
+      padding: 18px;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 18px auto;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 18px;
+      box-shadow: 0 8px 20px rgba(16, 24, 40, 0.04);
+      border: 1px solid var(--border-color);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .view-switcher {
+      display: flex;
+      gap: 8px;
+    }
+
+    .switch-btn {
+      padding: 8px 12px;
+      background: #f3f4f6;
+      border: 1px solid var(--border-color);
+      color: var(--text-dark);
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .switch-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    table th,
+    table td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    table th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: #eef2ff;
+      color: var(--accent);
+      font-weight: 600;
+      margin-right: 6px;
+    }
+
+    .action-btn.danger {
+      background: #fff2f2;
+      color: var(--danger);
+      border: 1px solid #ffd6d6;
+    }
+
+    .action-btn.small {
+      padding: 4px 8px;
+      font-size: 13px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status-bar {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .log-area {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+      font-size: 13px;
+      max-height: 240px;
+      overflow: auto;
+      background: #fbfdff;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #eef6ff;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="card">
+      <header>
+        <div>
+          <h2 style="margin:0;">Internal Admin Panel</h2>
+          <div class="muted" style="margin-top:6px;">God’s Eye — Access Manager & Logs</div>
+        </div>
+
+        <div class="controls">
+          <div class="view-switcher">
+            <button id="btnLogs" class="switch-btn active">Logs</button>
+            <button id="btnAccess" class="switch-btn">Access Manager</button>
+          </div>
+          <div style="width:12px;"></div>
+          <button id="logoutBtn" class="switch-btn">Logout</button>
+        </div>
+      </header>
+
+      <!-- LOG VIEW -->
+      <section id="viewLogs">
+        <h3 style="margin-top:0;">Activity Logs</h3>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+          <button id="refreshLogs" class="action-btn small">Refresh Logs</button>
+          <div id="logsStatus" class="muted">Logs last loaded: <span id="logsTime">never</span></div>
+        </div>
+        <div id="logArea" class="log-area">Loading logs...</div>
+      </section>
+
+      <!-- ACCESS MANAGER VIEW -->
+      <section id="viewAccess" class="hidden">
+        <h3 style="margin-top:0;">God's Eye Access Manager</h3>
+
+        <div style="display:flex; gap:8px; margin-bottom:12px; align-items:center;">
+          <button class="action-btn small" onclick="loadAccess('pending')">Pending</button>
+          <button class="action-btn small" onclick="loadAccess('active')">Active</button>
+          <button class="action-btn small" onclick="loadAccess('all')">All</button>
+          <div style="flex:1"></div>
+          <div id="accessStatus" class="muted">Requests: <span id="requestsCount">-</span></div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Employee</th>
+              <th>Dept</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Active</th>
+              <th>Requested At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="access-table-body"></tbody>
+        </table>
+
+      </section>
+
+      <div class="status-bar" id="statusBar">Ready</div>
+    </div>
+  </div>
+
+  <script>
+    // ---------------------------
+    // Admin UI: constants & token
+    // ---------------------------
+    console.log("[ADMIN_UI] booting admin UI");
+    const token = localStorage.getItem("admin_token");
+    if (!token) {
+      console.log("[ADMIN_UI] No admin token found, redirecting to admin login");
+      window.location.href = "/admin/login";
+    }
+
+    function setStatus(msg) {
+      document.getElementById("statusBar").textContent = msg;
+      console.log("[ADMIN_UI] " + msg);
+    }
+
+    // ---------------------------
+    // View switching
+    // ---------------------------
+    const btnLogs = document.getElementById("btnLogs");
+    const btnAccess = document.getElementById("btnAccess");
+    const viewLogs = document.getElementById("viewLogs");
+    const viewAccess = document.getElementById("viewAccess");
+
+    btnLogs.addEventListener("click", () => {
+      btnLogs.classList.add("active");
+      btnAccess.classList.remove("active");
+      viewLogs.classList.remove("hidden");
+      viewAccess.classList.add("hidden");
+    });
+
+    btnAccess.addEventListener("click", () => {
+      btnAccess.classList.add("active");
+      btnLogs.classList.remove("active");
+      viewAccess.classList.remove("hidden");
+      viewLogs.classList.add("hidden");
+      loadAccess("pending");
+    });
+
+    // ---------------------------
+    // Logs: simple loader
+    // ---------------------------
+    async function loadLogs() {
+      setStatus("Loading logs...");
+      document.getElementById("logArea").textContent = "Loading logs...";
+      try {
+        console.log("[ADMIN_UI] fetching /admin/logs (if present)");
+        const res = await fetch("/admin/logs", {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          document.getElementById("logArea").textContent = "Failed to load logs: " + res.status;
+          console.warn("[ADMIN_UI] logs fetch failed", res.status, text);
+          setStatus("Failed to load logs");
+          return;
+        }
+        const data = await res.json();
+        console.log("[ADMIN_UI] logs loaded", data);
+        const area = document.getElementById("logArea");
+        area.textContent = "";
+        (data.logs || []).forEach(l => {
+          const el = document.createElement("div");
+          el.textContent = `${l.created_at} | ${l.employee_id} | ${l.action} | ${l.details || ""} | ${l.ip || ""}`;
+          area.appendChild(el);
+        });
+        document.getElementById("logsTime").textContent = new Date().toLocaleString();
+        setStatus("Logs loaded");
+      } catch (e) {
+        console.error("[ADMIN_UI] loadLogs error", e);
+        document.getElementById("logArea").textContent = "Error loading logs";
+        setStatus("Error loading logs");
+      }
+    }
+
+    document.getElementById("refreshLogs").addEventListener("click", loadLogs);
+    // initial logs load
+    loadLogs();
+
+    // ---------------------------
+    // ACCESS MANAGER
+    // ---------------------------
+    async function loadAccess(type = "pending") {
+      setStatus(`Loading ${type} requests...`);
+      console.log("[ADMIN_UI] loadAccess type=", type);
+
+      // Map to god_eye endpoints (we use god_eye backend directly)
+      let endpoint = "/god_eye/requests/pending";
+      if (type === "active") endpoint = "/god_eye/active";
+      if (type === "all") endpoint = "/god_eye/requests/all" || "/god_eye/requests/pending";
+
+      try {
+        const res = await fetch(endpoint, {
+          headers: { "Authorization": "Bearer " + token }
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          console.warn("[ADMIN_UI] loadAccess failed", res.status, txt);
+          setStatus("Failed to load requests");
+          return;
+        }
+        const data = await res.json();
+        console.log("[ADMIN_UI] loadAccess response:", data);
+
+        // Normalize rows: the god_eye endpoints sometimes return { pending: [...] } or { rows: [...] }
+        let rows = [];
+        if (Array.isArray(data.pending)) rows = data.pending;
+        else if (Array.isArray(data.rows)) rows = data.rows;
+        else if (Array.isArray(data.requests)) rows = data.requests;
+        else if (Array.isArray(data)) rows = data;
+
+        document.getElementById("requestsCount").textContent = rows.length;
+        const tb = document.getElementById("access-table-body");
+        tb.innerHTML = "";
+
+        rows.forEach(r => {
+          const tr = document.createElement("tr");
+
+          tr.innerHTML = `
+            <td>${r.request_id || r.id || ""}</td>
+            <td>${r.employee_id || r.requested_by || ""}</td>
+            <td>${r.requested_dept_access || r.department_name || r.dept_name || r.dept_id || ""}</td>
+            <td>${r.access_type || ""}</td>
+            <td>${r.status || ""}</td>
+            <td>${r.active ? "Yes" : "No"}</td>
+            <td>${r.requested_at || r.created_at || ""}</td>
+          `;
+
+          const actionsTd = document.createElement("td");
+
+          // Approve / Reject (if pending)
+          if ((r.status || "").toLowerCase() === "pending") {
+            const approveBtn = document.createElement("button");
+            approveBtn.className = "action-btn small";
+            approveBtn.textContent = "Approve";
+            approveBtn.addEventListener("click", () => approveRequest(r.request_id || r.id));
+            actionsTd.appendChild(approveBtn);
+
+            const rejectBtn = document.createElement("button");
+            rejectBtn.className = "action-btn small danger";
+            rejectBtn.textContent = "Reject";
+            rejectBtn.addEventListener("click", () => rejectRequest(r.request_id || r.id));
+            actionsTd.appendChild(rejectBtn);
+          }
+
+          // Revoke (if active)
+          if (r.active == 1 || r.active === true) {
+            const revokeBtn = document.createElement("button");
+            revokeBtn.className = "action-btn small danger";
+            revokeBtn.textContent = "Revoke";
+            revokeBtn.addEventListener("click", () => revokeRequest(r.request_id || r.id));
+            actionsTd.appendChild(revokeBtn);
+          }
+
+          tr.appendChild(actionsTd);
+          tb.appendChild(tr);
+        });
+
+        setStatus("Requests loaded");
+      } catch (e) {
+        console.error("[ADMIN_UI] loadAccess exception", e);
+        setStatus("Error loading requests");
+      }
+    }
+
+    // ---------------------------
+    // Approve / Reject / Revoke
+    // ---------------------------
+    async function approveRequest(request_id) {
+      if (!confirm("Approve this request?")) return;
+      setStatus("Approving request " + request_id);
+      console.log("[ADMIN_UI] approving", request_id);
+
+      try {
+        const res = await fetch("/god_eye/approve", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({ request_id })
+        });
+
+        const data = await res.json();
+        console.log("[ADMIN_UI] approve response", data);
+
+        if (data.success) {
+          setStatus("Request approved");
+          loadAccess("pending");
+        } else {
+          setStatus("Approve failed: " + (data.message || "unknown"));
+          alert("Approve failed: " + (data.message || "unknown"));
+        }
+      } catch (e) {
+        console.error("[ADMIN_UI] approve error", e);
+        setStatus("Approve error");
+      }
+    }
+
+    async function rejectRequest(request_id) {
+      if (!confirm("Reject this request?")) return;
+      setStatus("Rejecting request " + request_id);
+      console.log("[ADMIN_UI] rejecting", request_id);
+
+      try {
+        const res = await fetch("/god_eye/reject", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({ request_id })
+        });
+
+        const data = await res.json();
+        console.log("[ADMIN_UI] reject response", data);
+
+        if (data.success) {
+          setStatus("Request rejected");
+          loadAccess("pending");
+        } else {
+          setStatus("Reject failed: " + (data.message || "unknown"));
+          alert("Reject failed: " + (data.message || "unknown"));
+        }
+      } catch (e) {
+        console.error("[ADMIN_UI] reject error", e);
+        setStatus("Reject error");
+      }
+    }
+
+    async function revokeRequest(request_id) {
+      if (!confirm("Revoke this active permission?")) return;
+      setStatus("Revoking request " + request_id);
+      console.log("[ADMIN_UI] revoking", request_id);
+
+      try {
+        const res = await fetch("/god_eye/revoke", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({ request_id })
+        });
+
+        const data = await res.json();
+        console.log("[ADMIN_UI] revoke response", data);
+
+        if (data.success) {
+          setStatus("Revoked");
+          loadAccess("active");
+        } else {
+          setStatus("Revoke failed: " + (data.message || "unknown"));
+          alert("Revoke failed: " + (data.message || "unknown"));
+        }
+      } catch (e) {
+        console.error("[ADMIN_UI] revoke error", e);
+        setStatus("Revoke error");
+      }
+    }
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("admin_token");
+      window.location.href = "/admin/login";
+    });
+
+    // initial load: show logs
+    loadLogs();
+  </script>
+</body>
+
+</html>

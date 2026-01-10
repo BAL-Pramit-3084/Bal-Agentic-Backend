@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background: linear-gradient(to bottom right, #eef2ff, #f8fafc);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center">
+
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+
+    <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">
+      Admin Login
+    </h1>
+
+    <form id="loginForm" style="margin-top: 10px;">
+
+      <label class="admin-input-label">Employee ID</label>
+      <input id="employeeId" type="text" placeholder="Enter your employee ID" class="admin-input-field">
+
+      <label class="admin-input-label" style="margin-top: 14px;">Password</label>
+      <input id="password" type="password" placeholder="Enter your password" class="admin-input-field">
+
+      <button id="loginBtn" type="button" class="admin-login-btn" style="margin-top: 20px;">
+        Login
+      </button>
+
+    </form>
+
+
+    <!-- Error Box -->
+    <div id="errorBox" class="hidden bg-red-100 text-red-700 p-3 mt-4 rounded-lg text-sm"></div>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const employeeId = document.getElementById('employeeId').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const errorBox = document.getElementById('errorBox');
+
+      if (!employeeId || !password) {
+        errorBox.textContent = "Both fields are required.";
+        errorBox.classList.remove("hidden");
+        return;
+      }
+
+      const res = await fetch('/api/v1/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee_id: employeeId, password })
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        errorBox.textContent = data.message || "Login failed.";
+        errorBox.classList.remove("hidden");
+        return;
+      }
+
+      // Save token
+      localStorage.setItem("adminToken", data.token);
+      localStorage.setItem("adminName", data.user.full_name);
+
+      // Redirect to admin panel
+      window.location.href = "/admin/";
+    });
+  </script>
+
+</body>
+
+</html>

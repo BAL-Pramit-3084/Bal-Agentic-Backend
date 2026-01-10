@@ -1,0 +1,63 @@
+# =============================================================================
+# BAL-AGENTIC-BACKEND - DEPLOYMENT DOCKER COMPOSE
+# =============================================================================
+# For deploying on intranet server
+#
+# USAGE:
+#   1. Place this file and .env in the same folder
+#   2. Run: docker-compose up -d
+#   3. Check: docker-compose logs -f
+# =============================================================================
+
+services:
+  bal-agentic-backend:
+    image: pramit3084/bal-agentic-backend:latest
+    container_name: bal-agentic-backend-platform
+    restart: unless-stopped
+
+    ports:
+      - "5100:5100"
+
+    environment:
+      - FLASK_ENV=production
+      - TZ=Asia/Kolkata
+      - PYTHONPATH=/app
+      - DEBUG_MODE=false
+
+    env_file:
+      - .env
+
+    # Persistent storage
+    volumes:
+      - ./generated_dashboards:/app/generated_dashboards
+      - ./logs:/app/logs
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+    networks:
+      - bal-network
+
+networks:
+  bal-network:
+    driver: bridge
+    name: bal-agentic-backend-network

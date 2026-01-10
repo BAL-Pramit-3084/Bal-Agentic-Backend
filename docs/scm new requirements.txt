@@ -1,0 +1,16 @@
+new box for pending pr
+new aging kpi - 30-60-90 days (pr created but not po)(take pr last release date)
+
+no of pr raised, po created, pr pending wrt purchase group
+
+pending grn, pr,po done but grn not created
+
+-> no data ->pending payment - advanced payment against PO & po but no payment aging
+
+vendor evaluation - on time delivery, po wrt delivery date, (if payment done within delivery date) <- {po delivery date < grn date}
+
+order of the boxes
+ no. of pr -> no of po -> pending pr -> pending po ........ and rest of the things
+
+
+lead time -> {po date - gr date}

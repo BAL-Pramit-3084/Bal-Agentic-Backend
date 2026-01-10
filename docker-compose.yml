@@ -1,0 +1,170 @@
+# =============================================================================
+# BALASORE ALLOYS BAL-AGENTIC-BACKEND PLATFORM - DOCKER COMPOSE
+# =============================================================================
+# Version: 3.0.0
+# Architecture: Modular Monolith with Plugin System
+#
+# FEATURES:
+# - Hot-reload for departments (add/update without rebuild)
+# - Persistent logs and dashboards
+# - Health monitoring
+# - Resource management
+# - Production-ready configuration
+#
+# USAGE:
+#   Development:   docker-compose up --build
+#   Production:    docker-compose up -d
+#   Stop:          docker-compose down
+#   Logs:          docker-compose logs -f bal-agentic-backend
+#   Restart:       docker-compose restart bal-agentic-backend
+#   Rebuild:       docker-compose up --build --force-recreate
+#   Health:        docker-compose ps
+#
+# ADDING NEW DEPARTMENT:
+#   1. Add folder: ./departments/new_dept/
+#   2. Add files: __init__.py, formatter.py, claude_analyzer.py, template_engine.py
+#   3. Update: departments_config.py
+#   4. Restart: docker-compose restart bal-agentic-backend
+#   (No rebuild needed!)
+# =============================================================================
+
+services:
+  # =============================================================================
+  # BAL-AGENTIC-BACKEND PLATFORM SERVICE
+  # =============================================================================
+  bal-agentic-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bal-agentic-backend-platform
+    restart: unless-stopped
+
+    # Port mapping
+    ports:
+      - "5100:5100"
+
+    # Environment variables
+    environment:
+      - FLASK_ENV=production
+      - TZ=Asia/Kolkata
+      - PYTHONPATH=/app
+      # Optional: Enable debug mode (set to 'false' in production)
+      - DEBUG_MODE=false
+
+    # Load environment from .env file
+    env_file:
+      - .env
+
+    # =============================================================================
+    # VOLUME MOUNTS (CRITICAL FOR HOT-RELOAD)
+    # =============================================================================
+    volumes:
+      # HOT-RELOAD: Department modules (add/update departments without rebuild)
+      - ./departments:/app/departments:ro
+
+      # HOT-RELOAD: Templates (update templates without rebuild)
+      - ./templates:/app/templates:ro
+
+      # HOT-RELOAD: Addons/Plugins (voice, future plugins)
+      - ./addons:/app/addons:ro
+
+      # HOT-RELOAD: Configuration (update configs without rebuild)
+      - ./config_modules:/app/config_modules:ro
+      - ./dashboards:/app/dashboards:ro
+
+      # PERSISTENT: Generated dashboards (survive container restarts)
+      - ./generated_dashboards:/app/generated_dashboards
+      - ./config_modules/generated_dashboards:/app/config_modules/generated_dashboards
+
+      # PERSISTENT: Logs (survive container restarts)
+      - ./logs:/app/logs
+      - ./config_modules/logs:/app/config_modules/logs
+
+      # STATIC: Frontend assets (if needed)
+      - ./static:/app/static:ro
+      - ./frontend:/app/frontend:ro
+
+      # Note: ':ro' = read-only mount (security best practice)
+      # Remove ':ro' only if the app needs to write to those directories
+
+    # =============================================================================
+    # RESOURCE LIMITS (ADJUST BASED ON YOUR SERVER)
+    # =============================================================================
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0" # Max 2 CPU cores
+          memory: 4G # Max 4GB RAM
+        reservations:
+          cpus: "0.5" # Min 0.5 CPU cores
+          memory: 1G # Min 1GB RAM
+
+    # =============================================================================
+    # HEALTH CHECK
+    # =============================================================================
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    # =============================================================================
+    # LOGGING CONFIGURATION
+    # =============================================================================
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m" # Max log file size
+        max-file: "10" # Keep 10 log files (500MB total)
+        compress: "true" # Compress old logs
+
+    # Network configuration
+    networks:
+      - bal-network
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  bal-network:
+    driver: bridge
+    name: bal-agentic-backend-network
+# =============================================================================
+# VOLUMES (OPTIONAL: Named volumes for better management)
+# =============================================================================
+# Uncomment if you want Docker-managed volumes instead of bind mounts
+# volumes:
+#   dashboard-data:
+#     driver: local
+#   logs-data:
+#     driver: local
+
+# =============================================================================
+# NOTES FOR PRODUCTION DEPLOYMENT
+# =============================================================================
+#
+# 1. SECURITY:
+#    - Ensure .env file has strong secrets
+#    - Never commit .env to git
+#    - Use JWT tokens from your Node.js backend
+#
+# 2. PERFORMANCE:
+#    - Adjust resource limits based on load testing
+#    - For 100 concurrent users, 2 CPU / 4GB RAM should be sufficient
+#    - Monitor with: docker stats bal-agentic-backend-platform
+#
+# 3. SCALING (Future):
+#    - To run multiple instances: docker-compose up --scale bal-agentic-backend=3
+#    - Add load balancer (nginx) in front
+#
+# 4. BACKUP:
+#    - Backup ./generated_dashboards regularly
+#    - Backup ./logs for audit trail
+#
+# 5. UPDATES:
+#    - Code changes: Just restart (docker-compose restart)
+#    - Dependency changes: Rebuild (docker-compose up --build)
+#    - New department: Just restart (hot-reload will pick it up)
+#
+# =============================================================================

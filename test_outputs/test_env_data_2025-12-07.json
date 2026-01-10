@@ -1,0 +1,755 @@
+{
+  "date": "2025-12-07",
+  "date_formatted": "December 7, 2025",
+  "day": 7,
+  "month": "December",
+  "month_abbrev": "Dec",
+  "year": 2025,
+  "day_name": "Sunday",
+  "financial_year": "2025-26",
+  "executive_summary": {
+    "food_waste": {
+      "value": 0,
+      "unit": "kg",
+      "subtext": "0.0 kg waste",
+      "color": "yellow"
+    },
+    "persons_served": {
+      "value": 0,
+      "unit": "",
+      "subtext": "Across all locations",
+      "color": "blue"
+    },
+    "stp_water": {
+      "value": 0,
+      "unit": "KL",
+      "subtext": "Daily flow",
+      "color": "cyan"
+    },
+    "compliance_score": {
+      "value": "100%",
+      "unit": "",
+      "subtext": "23/23 returns filed",
+      "color": "purple"
+    },
+    "incidents": {
+      "value": 0,
+      "unit": "",
+      "subtext": "Zero incidents reported",
+      "color": "green"
+    },
+    "cbam_emissions": {
+      "value": "4.09",
+      "unit": "tCO\u2082e/MT",
+      "subtext": "Mar trend",
+      "color": "yellow"
+    }
+  },
+  "data_gaps": [
+    {
+      "type": "warning",
+      "title": "Data Recording Gap Identified",
+      "message": "Biomedical waste data not recorded for 37 days. Last entry: October 31, 2025 (Yellow container: 53g generated). Recommend immediate data entry to maintain compliance records.",
+      "icon": "\u26a0\ufe0f"
+    }
+  ],
+  "food_waste": {
+    "td": {
+      "total_waste": 0,
+      "total_persons": 0,
+      "waste_per_person": 0,
+      "is_zero_waste": true,
+      "by_location": {}
+    },
+    "mtd": {
+      "zero_waste_days": 2,
+      "total_days": 4,
+      "zero_waste_pct": 50.0
+    },
+    "chart": {
+      "labels": [
+        "Dec 01",
+        "Dec 02",
+        "Dec 03",
+        "Dec 04"
+      ],
+      "waste_data": [
+        1.0,
+        2.0,
+        0.0,
+        0.0
+      ],
+      "persons_data": [
+        439,
+        481,
+        464,
+        530
+      ]
+    }
+  },
+  "stp_water": {
+    "td": {
+      "initial_reading": 0,
+      "final_reading": 0,
+      "daily_flow": 0,
+      "is_anomaly": false,
+      "anomaly_pct": -100.0
+    },
+    "mtd": {
+      "avg_flow": 27.5,
+      "total_flow": 110.0,
+      "days": 4
+    },
+    "chart": {
+      "labels": [
+        "Dec 01",
+        "Dec 02",
+        "Dec 03",
+        "Dec 04"
+      ],
+      "data": [
+        29.0,
+        24.0,
+        27.0,
+        30.0
+      ],
+      "avg_line": 27.5
+    }
+  },
+  "cbam_emissions": {
+    "has_data": true,
+    "current": {
+      "month": "Mar",
+      "direct": 1.605,
+      "indirect": 2.487,
+      "total": 4.092,
+      "threshold": 5.45,
+      "threshold_gap_pct": 24.9
+    },
+    "trend": {
+      "direct": {
+        "pct": 0.0,
+        "direction": "stable"
+      },
+      "indirect": {
+        "pct": 1.5,
+        "direction": "up"
+      },
+      "total": {
+        "pct": 0.0,
+        "direction": "stable"
+      },
+      "prev_month": "Feb"
+    },
+    "chart": {
+      "labels": [
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Jan",
+        "Feb",
+        "Mar"
+      ],
+      "direct": [
+        1.529,
+        1.548,
+        1.619,
+        1.592,
+        1.654,
+        1.684,
+        1.752,
+        1.663,
+        1.611,
+        1.605
+      ],
+      "indirect": [
+        2.476,
+        2.472,
+        2.657,
+        2.523,
+        2.581,
+        2.864,
+        2.848,
+        4.222,
+        2.45,
+        2.487
+      ],
+      "total": [
+        4.005,
+        4.02,
+        4.276,
+        4.115,
+        4.235,
+        4.53,
+        4.415,
+        5.885,
+        4.061,
+        4.092
+      ],
+      "threshold": [
+        5.45,
+        5.45,
+        5.45,
+        5.45,
+        5.45,
+        5.45,
+        5.45,
+        5.45,
+        5.45,
+        5.45
+      ]
+    }
+  },
+  "licenses": {
+    "total": 17,
+    "expiring_soon": 2,
+    "expired": 1,
+    "valid": 14,
+    "licenses": [
+      {
+        "location": "Balasore",
+        "type": "Authorization for Generation, Storage, Transport, Reuse, and Disposal of Hazardous and Other  Wastes",
+        "license_no": "IND-IV-HW-293/6025 Dt. 25.03.2025",
+        "authority": "SPCB, Bbsr, Odisha",
+        "valid_upto": "2026-03-31",
+        "renewal_date": "2025-11-15",
+        "payment_due": "No",
+        "status_class": "status-valid",
+        "status_text": "Valid till Mar 2026"
+      },
+      {
+        "location": "Balasore",
+        "type": "Authorization under Bio-Medical Waste (Management & Handling)  Rule",
+        "license_no": "618/BMW/157 Dt. 28.03.2018",
+        "authority": "SPCB ,BBSR, Odisha",
+        "valid_upto": "",
+        "renewal_date": "",
+        "payment_due": "No",
+        "status_class": "status-na",
+        "status_text": "Perpetual"
+      },
+      {
+        "location": "Balasore",
+        "type": "CTO",
+        "license_no": "6884/IND-I-CON-1616 Dt 31.03.25",
+        "authority": "SPCB, BBSR, Odisha",
+        "valid_upto": "2026-03-31",
+        "renewal_date": "2025-12-15",
+        "payment_due": "No",
+        "status_class": "status-valid",
+        "status_text": "Valid till Mar 2026"
+      },
+      {
+        "location": "Balasore",
+        "type": "Environment Clearance (EC)",
+        "license_no": "No. J-11011/245/2008-IA.II(l) dt 07.08.2019",
+        "authority": "MoEF & CC, New Delhi",
+        "valid_upto": "",
+        "renewal_date": "",
+        "payment_due": "No",
+        "status_class": "status-na",
+        "status_text": "Perpetual"
+      },
+      {
+        "location": "Balasore",
+        "type": "MOU with State Water Resources Deptt.",
+        "license_no": "__",
+        "authority": "Irrigation department, Balasore",
+        "valid_upto": "",
+        "renewal_date": "",
+        "payment_due": "No",
+        "status_class": "status-na",
+        "status_text": "Perpetual"
+      },
+      {
+        "location": "Balasore",
+        "type": "NOC for Ground Water Withdrawal",
+        "license_no": "21-4/41/OR/IND/2008",
+        "authority": "CGWA, New Delhi",
+        "valid_upto": "2026-02-15",
+        "renewal_date": "2025-10-15",
+        "payment_due": "No",
+        "status_class": "status-expiring",
+        "status_text": "Expires in 70 days"
+      },
+      {
+        "location": "Kaliapani Mines",
+        "type": "Authorization for Generation, Storage, Transport, Reuse, and Disposal of Hazardous and Other  Wastes",
+        "license_no": "IND-IV-HW-592/6860 Dt. 31.03.2025",
+        "authority": "RO, SPCB, Jajpur, Odisha",
+        "valid_upto": "2026-03-31",
+        "renewal_date": "2025-11-15",
+        "payment_due": "No",
+        "status_class": "status-valid",
+        "status_text": "Valid till Mar 2026"
+      },
+      {
+        "location": "Kaliapani Mines",
+        "type": "Authorization under Bio-Medical Waste (Management & Handling)  Rule",
+        "license_no": "536/27/RO-SPCB-KNG/BMW Dt. 21.02.2017",
+        "authority": "RO, SPCB, Jajpur, Odisha",
+        "valid_upto": "",
+        "renewal_date": "",
+        "payment_due": "No",
+        "status_class": "status-na",
+        "status_text": "Perpetual"
+      },
+      {
+        "location": "Kaliapani Mines",
+        "type": "CTO",
+        "license_no": "2010/IND-I-CON-2576 Dt 01.02.2025",
+        "authority": "SPCB, BBSR, Odisha",
+        "valid_upto": "2026-03-31",
+        "renewal_date": "2025-12-15",
+        "payment_due": "No",
+        "status_class": "status-valid",
+        "status_text": "Valid till Mar 2026"
+      },
+      {
+        "location": "Kaliapani Mines",
+        "type": "Environment Clearance (EC)",
+        "license_no": "No. J-11015/139/2012-IA.II(Ml) dt 22.08.2014",
+        "authority": "MoEF & CC, New Delhi",
+        "valid_upto": "",
+        "renewal_date": "",
+        "payment_due": "No",
+        "status_class": "status-na",
+        "status_text": "Perpetual"
+      },
+      {
+        "location": "Kaliapani Mines",
+        "type": "MOU with State Water Resources Deptt.",
+        "license_no": "WT-19/2630 ON DATED 25.07.2025",
+        "authority": "Irrigation department, Jaraka, Jajpur",
+        "valid_upto": "2026-02-28",
+        "renewal_date": "2026-02-15",
+        "payment_due": "No",
+        "status_class": "status-expiring",
+        "status_text": "Expires in 83 days"
+      },
+      {
+        "location": "Kaliapani Mines",
+        "type": "NOC for Ground Water Withdrawal",
+        "license_no": "21-4/819/OR/MIN/2015",
+        "authority": "CGWA, New Delhi",
+        "valid_upto": "",
+        "renewal_date": "",
+        "payment_due": "2.38 crore",
+        "status_class": "status-na",
+        "status_text": "Perpetual"
+      },
+      {
+        "location": "Sukinda",
+        "type": "Authorization for Generation, Storage, Transport, Reuse, and Disposal of Hazardous and Other  Wastes",
+        "license_no": "IND-IV-HW-1242/7575 Dt. 27.06.2018",
+        "authority": "RO, SPCB, Jajpur, Odisha",
+        "valid_upto": "2022-03-31",
+        "renewal_date": "",
+        "payment_due": "No",
+        "status_class": "status-expired",
+        "status_text": "Expired 1347 days ago"
+      },
+      {
+        "location": "Sukinda",
+        "type": "Authorization under Bio-Medical Waste (Management & Handling)  Rule",
+        "license_no": "2245/38/RO-SPCB-KNG/BMW Dt. 31.07.2017",
+        "authority": "RO, SPCB, Jajpur, Odisha",
+        "valid_upto": "",
+        "renewal_date": "",
+        "payment_due": "No",
+        "status_class": "status-na",
+        "status_text": "Perpetual"
+      },
+      {
+        "location": "Sukinda",
+        "type": "CTO",
+        "license_no": "1062/IND-48 Dt 29.03.2025",
+        "authority": "RO, Kalingnagar",
+        "valid_upto": "2026-03-31",
+        "renewal_date": "2025-12-15",
+        "payment_due": "No",
+        "status_class": "status-valid",
+        "status_text": "Valid till Mar 2026"
+      },
+      {
+        "location": "Sukinda",
+        "type": "MOU with State Water Resources Deptt.",
+        "license_no": "WT-16/2635 ON DATED 25.07.2025",
+        "authority": "Irrigation department, Jaraka, Jajpur",
+        "valid_upto": "2026-06-30",
+        "renewal_date": "2026-06-15",
+        "payment_due": "No",
+        "status_class": "status-valid",
+        "status_text": "Valid till Jun 2026"
+      },
+      {
+        "location": "Sukinda",
+        "type": "NOC for Ground Water Withdrawal",
+        "license_no": "21-4/1306/OR/IND/2017",
+        "authority": "CGWA, New Delhi",
+        "valid_upto": "",
+        "renewal_date": "",
+        "payment_due": "Charge not finalized",
+        "status_class": "status-na",
+        "status_text": "Perpetual"
+      }
+    ]
+  },
+  "air_quality": {
+    "has_data": false,
+    "stations": {},
+    "chart": {}
+  },
+  "industrial_waste": {
+    "has_data": true,
+    "current": {
+      "month": "October",
+      "production_mt": 17599.0,
+      "slag_mt": 7798.0,
+      "gcp_dust_mt": 11866.31,
+      "slag_ratio_pct": 44.3
+    },
+    "trend": [
+      {
+        "month": "April",
+        "production": 10003.21,
+        "slag": 10715.715,
+        "gcp_dust": 236.815
+      },
+      {
+        "month": "May",
+        "production": 10900.78,
+        "slag": 11619.42,
+        "gcp_dust": 246.47
+      },
+      {
+        "month": "June",
+        "production": 10182.03,
+        "slag": 10284.0,
+        "gcp_dust": 220.81
+      },
+      {
+        "month": "July",
+        "production": 9134.0,
+        "slag": 12810.745,
+        "gcp_dust": 242.37
+      },
+      {
+        "month": "August",
+        "production": 7813.9,
+        "slag": 12054.23,
+        "gcp_dust": 237.45
+      },
+      {
+        "month": "September",
+        "production": 13659.0,
+        "slag": 7356.0,
+        "gcp_dust": 11646.925
+      },
+      {
+        "month": "October",
+        "production": 17599.0,
+        "slag": 7798.0,
+        "gcp_dust": 11866.31
+      }
+    ]
+  },
+  "compliance_returns": {
+    "total": 23,
+    "complied": 23,
+    "pending": 0,
+    "compliance_rate": 100.0,
+    "returns": [
+      {
+        "area": "Balasore",
+        "subject": "Maintenance of Record and Submission of Annual Return",
+        "frequency": "yearly (by end of June)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submission Not Required",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Balasore",
+        "subject": "Quarterly Report of progress on Trees Plantation",
+        "frequency": "Quaterly",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Balasore",
+        "subject": "Six Monthly EC Compliance",
+        "frequency": "Six Monthly (by 1 June & 1 Dec)",
+        "authority": "Ministry of Environment, Forest and Climate Change (MoEF&CC)",
+        "status": "Submitted on 29.05.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Balasore",
+        "subject": "Submission of annual Environmental Statement Report",
+        "frequency": "yearly (by 30th September)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submitted on 26.09.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Balasore",
+        "subject": "Submission of Annual Report",
+        "frequency": "yearly (by 30th June)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submitted on 26.06.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Balasore",
+        "subject": "Submission of Annual Return",
+        "frequency": "yearly (by 30th June)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submitted on 26.06.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Balasore",
+        "subject": "Submission of Return of Used Batteries",
+        "frequency": "Half  Yearly  (by end of June and December)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submission Not Required",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Balasore",
+        "subject": "Submission of Water Consumption & deposition of Water tax Payment",
+        "frequency": "Monthly",
+        "authority": "Office of the Executive Engineer, Irrigation Division, Balasore",
+        "status": "Submitted on 26.07.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Kaliapani Mines",
+        "subject": "Maintenance of Record and Submission of Annual Return",
+        "frequency": "yearly (by end of June)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submission Not Required",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Kaliapani Mines",
+        "subject": "Quarterly Report of progress on Trees Plantation",
+        "frequency": "Quaterly",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Kaliapani Mines",
+        "subject": "Six Monthly EC Compliance",
+        "frequency": "Six Monthly (by 1 June & 1 Dec)",
+        "authority": "Ministry of Environment, Forest and Climate Change (MoEF&CC)",
+        "status": "Submitted on 30.05.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Kaliapani Mines",
+        "subject": "Submission of annual Environmental Statement Report",
+        "frequency": "yearly (by 30th September)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submitted on 26.09.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Kaliapani Mines",
+        "subject": "Submission of Annual Report",
+        "frequency": "yearly (by 30th June)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submitted on",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Kaliapani Mines",
+        "subject": "Submission of Annual Return",
+        "frequency": "yearly (by 30th June)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submitted on",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Kaliapani Mines",
+        "subject": "Submission of Return of Used Batteries",
+        "frequency": "Half  Yearly  (by end of June and December)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submission Not Required",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Kaliapani Mines",
+        "subject": "Submission of Water Consumption & deposition of Water tax Payment",
+        "frequency": "Monthly",
+        "authority": "Office of the Executive Engineer, Irrigation Division, Jaraka, Jajpur",
+        "status": "Submitted on 26.07.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Sukinda",
+        "subject": "Maintenance of Record and Submission of Annual Return",
+        "frequency": "yearly (by end of June)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submission Not Required",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Sukinda",
+        "subject": "Quarterly Report of progress on Trees Plantation",
+        "frequency": "Quaterly",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Sukinda",
+        "subject": "Submission of annual Environmental Statement Report",
+        "frequency": "yearly (by 30th September)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submitted on 26.09.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Sukinda",
+        "subject": "Submission of Annual Report",
+        "frequency": "yearly (by 30th June)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submitted on 28.06.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Sukinda",
+        "subject": "Submission of Annual Return",
+        "frequency": "yearly (by 30th June)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submitted on 28.06.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Sukinda",
+        "subject": "Submission of Return of Used Batteries",
+        "frequency": "Half  Yearly  (by end of June and December)",
+        "authority": "Odisha State Pollution Control Board",
+        "status": "Submission Not Required",
+        "remarks": "Complied",
+        "is_complied": true
+      },
+      {
+        "area": "Sukinda",
+        "subject": "Submission of Water Consumption & deposition of Water tax Payment",
+        "frequency": "Monthly",
+        "authority": "Office of the Executive Engineer, Irrigation Division, Jaraka, Jajpur",
+        "status": "Submitted on 26.07.2025",
+        "remarks": "Complied",
+        "is_complied": true
+      }
+    ]
+  },
+  "training": {
+    "total_sessions": 6,
+    "total_attendees": 114,
+    "by_type": {
+      "ESG awarness program": {
+        "sessions": 1,
+        "attendees": 34
+      },
+      "ESG awarness": {
+        "sessions": 2,
+        "attendees": 55
+      },
+      "Environment Awarness (Induction Training)": {
+        "sessions": 3,
+        "attendees": 25
+      }
+    },
+    "trainers": [
+      "Manoj Kumar Patra",
+      "Prashant Bardhan",
+      "Dr. Sudam Charan Barik"
+    ],
+    "records": [
+      {
+        "date": "2025-12-01",
+        "training": "ESG awarness program",
+        "trainer": "Dr. Sudam Charan Barik",
+        "attendees": 34
+      },
+      {
+        "date": "2025-11-29",
+        "training": "ESG awarness",
+        "trainer": "Dr. Sudam Charan Barik",
+        "attendees": 20
+      },
+      {
+        "date": "2025-11-21",
+        "training": "Environment Awarness (Induction Training)",
+        "trainer": "Prashant Bardhan",
+        "attendees": 10
+      },
+      {
+        "date": "2025-10-15",
+        "training": "Environment Awarness (Induction Training)",
+        "trainer": "Manoj Kumar Patra",
+        "attendees": 10
+      },
+      {
+        "date": "2025-07-25",
+        "training": "Environment Awarness (Induction Training)",
+        "trainer": "Prashant Bardhan",
+        "attendees": 5
+      },
+      {
+        "date": "2025-07-10",
+        "training": "ESG awarness",
+        "trainer": "Dr. Sudam Charan Barik",
+        "attendees": 35
+      }
+    ]
+  },
+  "incidents": {
+    "count": 0,
+    "incidents": []
+  },
+  "biomedical_waste": {
+    "has_data": false,
+    "td": {
+      "total_generated": 0,
+      "total_disposed": 0,
+      "by_container": {}
+    },
+    "last_entry": {
+      "date": "2025-10-31",
+      "container": "Yellow",
+      "grams": 53.0
+    }
+  },
+  "has_data": true
+}

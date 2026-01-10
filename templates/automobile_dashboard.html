@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truck Fleet Dashboard - December 16, 2025</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; min-height: 100vh; color: #2d3748; padding: 20px; }
+        
+        .header { text-align: center; padding: 25px; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #3182ce 100%); border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(30, 58, 95, 0.3); }
+        .header h1 { font-size: 2.2rem; font-weight: 700; color: white; }
+        .header .subtitle { font-size: 1.1rem; color: rgba(255,255,255,0.9); margin-top: 8px; }
+        .header .date-badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 25px; margin-top: 12px; font-weight: 600; font-size: 1rem; color: white; }
+        
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .kpi-card { background: white; border-radius: 12px; padding: 18px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; transition: transform 0.3s ease; }
+        .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(30, 58, 95, 0.12); }
+        .kpi-value { font-size: 1.7rem; font-weight: 700; color: #1e3a5f; }
+        .kpi-label { font-size: 0.72rem; color: #718096; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-change { font-size: 0.68rem; margin-top: 6px; padding: 3px 10px; border-radius: 10px; display: inline-block; }
+        .kpi-change.positive { background: rgba(72, 187, 120, 0.15); color: #2f855a; }
+        .kpi-change.negative { background: rgba(245, 101, 101, 0.15); color: #c53030; }
+        .kpi-change.neutral { background: rgba(160, 174, 192, 0.2); color: #718096; }
+        
+        .section-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 25px; }
+        @media (max-width: 1200px) { .section-grid { grid-template-columns: 1fr; } }
+        
+        .section-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+        .section-card.full-width { grid-column: 1 / -1; }
+        
+        .section-title { font-size: 1.05rem; font-weight: 600; color: #1e3a5f; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 10px; }
+        .section-title .icon { width: 28px; height: 28px; background: linear-gradient(135deg, #1e3a5f, #2d5a87); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .data-table th { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: white; padding: 10px 5px; text-align: left; font-weight: 600; text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.5px; }
+        .data-table th:first-child { border-radius: 6px 0 0 0; }
+        .data-table th:last-child { border-radius: 0 6px 0 0; }
+        .data-table td { padding: 8px 5px; border-bottom: 1px solid #e2e8f0; color: #2d3748; }
+        .data-table tbody tr:hover { background: #f7fafc; }
+        .data-table tbody tr.highlight { background: rgba(72, 187, 120, 0.1); }
+        .data-table tbody tr.warning { background: rgba(237, 137, 54, 0.1); }
+        .data-table tbody tr.danger { background: rgba(245, 101, 101, 0.1); }
+        
+        .badge { padding: 3px 8px; border-radius: 10px; font-size: 0.62rem; font-weight: 600; }
+        .badge-success { background: rgba(72, 187, 120, 0.2); color: #2f855a; }
+        .badge-warning { background: rgba(237, 137, 54, 0.2); color: #c05621; }
+        .badge-danger { background: rgba(245, 101, 101, 0.2); color: #c53030; }
+        .badge-info { background: rgba(66, 153, 225, 0.2); color: #2b6cb0; }
+        
+        .chart-container { position: relative; height: 260px; width: 100%; }
+        
+        .progress-bar-container { margin: 8px 0; }
+        .progress-label { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.75rem; color: #4a5568; }
+        .progress-bar { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; }
+        .progress-fill.green { background: linear-gradient(90deg, #48bb78, #38a169); }
+        .progress-fill.orange { background: linear-gradient(90deg, #ed8936, #dd6b20); }
+        .progress-fill.red { background: linear-gradient(90deg, #f56565, #e53e3e); }
+        .progress-fill.blue { background: linear-gradient(90deg, #4299e1, #3182ce); }
+        
+        .insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+        .insight-card { background: #f7fafc; border-left: 4px solid #1e3a5f; padding: 12px; border-radius: 0 8px 8px 0; }
+        .insight-card.warning { background: #fffaf0; border-left-color: #ed8936; }
+        .insight-card.danger { background: #fff5f5; border-left-color: #f56565; }
+        .insight-card.success { background: #f0fff4; border-left-color: #48bb78; }
+        .insight-title { font-weight: 600; margin-bottom: 4px; font-size: 0.85rem; color: #2d3748; }
+        .insight-text { font-size: 0.75rem; color: #718096; line-height: 1.4; }
+        
+        .summary-box { background: linear-gradient(135deg, rgba(30, 58, 95, 0.06), rgba(45, 90, 135, 0.06)); border-radius: 10px; padding: 15px; margin-top: 15px; border: 1px solid rgba(30, 58, 95, 0.15); }
+        .summary-title { font-size: 0.92rem; font-weight: 600; margin-bottom: 8px; color: #1e3a5f; }
+        .summary-content { font-size: 0.82rem; line-height: 1.6; color: #4a5568; }
+        
+        .metric-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+        .metric-row:last-child { border-bottom: none; }
+        .metric-name { color: #718096; font-size: 0.8rem; }
+        .metric-value { font-weight: 600; color: #1e3a5f; font-size: 0.82rem; }
+        
+        .fuel-gauge { display: flex; align-items: center; gap: 6px; }
+        .fuel-bar { flex: 1; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
+        .fuel-level { height: 100%; border-radius: 5px; }
+        .fuel-level.high { background: linear-gradient(90deg, #48bb78, #38a169); }
+        .fuel-level.medium { background: linear-gradient(90deg, #ed8936, #dd6b20); }
+        .fuel-level.low { background: linear-gradient(90deg, #f56565, #e53e3e); }
+        
+        .mtd-card { background: white; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid; }
+        .mtd-card.blue { border-left-color: #4299e1; }
+        .mtd-card.green { border-left-color: #48bb78; }
+        .mtd-card.orange { border-left-color: #ed8936; }
+        .mtd-card.purple { border-left-color: #9f7aea; }
+        .mtd-card.red { border-left-color: #f56565; }
+        .mtd-card.teal { border-left-color: #38b2ac; }
+        .mtd-value { font-size: 1.4rem; font-weight: 700; }
+        .mtd-value.blue { color: #2b6cb0; }
+        .mtd-value.green { color: #2f855a; }
+        .mtd-value.orange { color: #c05621; }
+        .mtd-value.purple { color: #6b46c1; }
+        .mtd-value.red { color: #c53030; }
+        .mtd-value.teal { color: #2c7a7b; }
+        
+        .idle-indicator { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 8px; font-size: 0.65rem; }
+        .idle-indicator.high { background: rgba(245, 101, 101, 0.15); color: #c53030; }
+        .idle-indicator.medium { background: rgba(237, 137, 54, 0.15); color: #c05621; }
+        .idle-indicator.low { background: rgba(72, 187, 120, 0.15); color: #2f855a; }
+        
+        .footer { text-align: center; padding: 15px; color: #718096; font-size: 0.8rem; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚛 Truck Fleet Daily Dashboard</h1>
+        <div class="subtitle">Balasore Alloys Limited - MAN Truck Fleet Telematics</div>
+        <div class="date-badge">📅 December 16, 2025 (Monday)</div>
+    </div>
+
+    <!-- Daily KPIs -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-value">35</div>
+            <div class="kpi-label">Total Trucks</div>
+            <div class="kpi-change neutral">Fleet Size</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">18</div>
+            <div class="kpi-label">Active Trucks</div>
+            <div class="kpi-change negative">51% Utilized</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">713.9</div>
+            <div class="kpi-label">Total Distance (KM)</div>
+            <div class="kpi-change negative">▼ vs 775.5 Yesterday</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">775.7</div>
+            <div class="kpi-label">Fuel Consumed (L)</div>
+            <div class="kpi-change negative">▲ vs 748.8 Yesterday</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">0.92</div>
+            <div class="kpi-label">Avg Mileage (KMPL)</div>
+            <div class="kpi-change neutral">Fleet Average</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">754.7</div>
+            <div class="kpi-label">Fuel Filled (L)</div>
+            <div class="kpi-change positive">6 Fillings</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">50</div>
+            <div class="kpi-label">Max Speed (KM/H)</div>
+            <div class="kpi-change success">Safe Range</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">0</div>
+            <div class="kpi-label">Fuel Drained (L)</div>
+            <div class="kpi-change success">No Theft</div>
+        </div>
+    </div>
+
+    <!-- MTD Summary -->
+    <div class="section-card full-width" style="margin-bottom: 25px;">
+        <div class="section-title"><div class="icon">📊</div>Month-to-Date Summary (Dec 1-16, 2025)</div>
+        <div class="kpi-grid" style="margin-bottom: 0;">
+            <div class="mtd-card blue">
+                <div class="mtd-value blue">13,188.9 KM</div>
+                <div class="kpi-label">MTD Total Distance</div>
+            </div>
+            <div class="mtd-card orange">
+                <div class="mtd-value orange">13,626.0 L</div>
+                <div class="kpi-label">MTD Fuel Consumed</div>
+            </div>
+            <div class="mtd-card green">
+                <div class="mtd-value green">12,625.5 L</div>
+                <div class="kpi-label">MTD Fuel Filled</div>
+            </div>
+            <div class="mtd-card purple">
+                <div class="mtd-value purple">0.97 KMPL</div>
+                <div class="kpi-label">MTD Avg Mileage</div>
+            </div>
+            <div class="mtd-card red">
+                <div class="mtd-value red">55.4 L</div>
+                <div class="kpi-label">MTD Fuel Drained</div>
+            </div>
+            <div class="mtd-card teal">
+                <div class="mtd-value teal">24</div>
+                <div class="kpi-label">Trucks With Trips</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Performers & Fleet Status -->
+    <div class="section-grid">
+        <!-- Top Performers Today -->
+        <div class="section-card">
+            <div class="section-title"><div class="icon">🏆</div>Top Performers - Dec 16, 2025</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Truck</th>
+                        <th>Distance</th>
+                        <th>Fuel</th>
+                        <th>Mileage</th>
+                        <th>Engine Hrs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="highlight">
+                        <td>🥇 1</td>
+                        <td><strong>MAN77</strong></td>
+                        <td>77.07 km</td>
+                        <td>102.4 L</td>
+                        <td><span class="badge badge-warning">0.75</span></td>
+                        <td>14:43</td>
+                    </tr>
+                    <tr class="highlight">
+                        <td>🥈 2</td>
+                        <td><strong>MAN50</strong></td>
+                        <td>75.92 km</td>
+                        <td>71.2 L</td>
+                        <td><span class="badge badge-success">1.07</span></td>
+                        <td>13:50</td>
+                    </tr>
+                    <tr class="highlight">
+                        <td>🥉 3</td>
+                        <td><strong>MAN69</strong></td>
+                        <td>69.33 km</td>
+                        <td>74.7 L</td>
+                        <td><span class="badge badge-success">0.93</span></td>
+                        <td>11:09</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>MAN71</td>
+                        <td>67.92 km</td>
+                        <td>0.8 L</td>
+                        <td><span class="badge badge-info">84.9*</span></td>
+                        <td>0:37</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>MAN65</td>
+                        <td>63.97 km</td>
+                        <td>97.6 L</td>
+                        <td><span class="badge badge-danger">0.66</span></td>
+                        <td>12:42</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="summary-box" style="margin-top: 10px;">
+                <div style="font-size: 0.75rem; color: #718096;">* MAN71: Anomalous mileage (84.9 KMPL) indicates sensor malfunction - only 0.8L consumed for 67.92 km</div>
+            </div>
+        </div>
+
+        <!-- Idle Time Analysis -->
+        <div class="section-card">
+            <div class="section-title"><div class="icon">⏱️</div>Idle Time Analysis - Dec 16</div>
+            <div class="progress-bar-container">
+                <div class="progress-label"><span>MAN77 - Idle: 7:37 hrs (52% of engine time)</span><span class="idle-indicator high">High</span></div>
+                <div class="progress-bar"><div class="progress-fill red" style="width: 52%;"></div></div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-label"><span>MAN65 - Idle: 6:19 hrs (50% of engine time)</span><span class="idle-indicator high">High</span></div>
+                <div class="progress-bar"><div class="progress-fill red" style="width: 50%;"></div></div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-label"><span>MAN67 - Idle: 4:58 hrs (55% of engine time)</span><span class="idle-indicator high">High</span></div>
+                <div class="progress-bar"><div class="progress-fill red" style="width: 55%;"></div></div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-label"><span>MAN55 - Idle: 5:45 hrs (48% of engine time)</span><span class="idle-indicator medium">Med</span></div>
+                <div class="progress-bar"><div class="progress-fill orange" style="width: 48%;"></div></div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-label"><span>MAN66 - Idle: 2:24 hrs (24% of engine time)</span><span class="idle-indicator low">Low</span></div>
+                <div class="progress-bar"><div class="progress-fill green" style="width: 24%;"></div></div>
+            </div>
+            <div class="summary-box">
+                <div class="summary-title">⚠️ Total Idle Hours Today: ~56 Hours</div>
+                <div class="summary-content">Average idle ratio: 47% of engine time. Best performer: MAN66 (24% idle). Diesel Tanker has 90% idle time (2:10 idle out of 2:24 engine hours).</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Complete Vehicle Details -->
+    <div class="section-card full-width" style="margin-bottom: 25px;">
+        <div class="section-title"><div class="icon">📋</div>Complete Truck Trip Report - December 16, 2025</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Truck</th>
+                    <th>Distance</th>
+                    <th>Engine Hrs</th>
+                    <th>Motion Hrs</th>
+                    <th>Idle Hrs</th>
+                    <th>Idle %</th>
+                    <th>Fuel Used</th>
+                    <th>Mileage</th>
+                    <th>Max Spd</th>
+                    <th>Filled</th>
+                    <th>Fuel Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="highlight">
+                    <td><strong>MAN77</strong></td>
+                    <td>77.07 km</td>
+                    <td>14:43</td>
+                    <td>7:06</td>
+                    <td>7:37</td>
+                    <td><span class="badge badge-danger">52%</span></td>
+                    <td>102.4 L</td>
+                    <td>0.75</td>
+                    <td>33 km/h</td>
+                    <td>146.7 L</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level high" style="width: 63%;"></div></div>
+                            <span style="font-size: 0.68rem;">101L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="highlight">
+                    <td><strong>MAN50</strong></td>
+                    <td>75.92 km</td>
+                    <td>13:50</td>
+                    <td>8:17</td>
+                    <td>5:33</td>
+                    <td><span class="badge badge-warning">40%</span></td>
+                    <td>71.2 L</td>
+                    <td><span style="color: #2f855a; font-weight: 600;">1.07</span></td>
+                    <td>41 km/h</td>
+                    <td>0</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level medium" style="width: 35%;"></div></div>
+                            <span style="font-size: 0.68rem;">56L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>MAN69</strong></td>
+                    <td>69.33 km</td>
+                    <td>11:09</td>
+                    <td>6:21</td>
+                    <td>4:47</td>
+                    <td><span class="badge badge-warning">43%</span></td>
+                    <td>74.7 L</td>
+                    <td>0.93</td>
+                    <td>43 km/h</td>
+                    <td>0</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level low" style="width: 11%;"></div></div>
+                            <span style="font-size: 0.68rem; color: #c53030;">17L ⚠️</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="warning">
+                    <td><strong>MAN71</strong></td>
+                    <td>67.92 km</td>
+                    <td>0:37</td>
+                    <td>0:20</td>
+                    <td>0:17</td>
+                    <td><span class="badge badge-warning">47%</span></td>
+                    <td>0.8 L</td>
+                    <td><span class="badge badge-info">84.9*</span></td>
+                    <td>17 km/h</td>
+                    <td>0</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level low" style="width: 16%;"></div></div>
+                            <span style="font-size: 0.68rem; color: #c53030;">26L ⚠️</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>MAN65</strong></td>
+                    <td>63.97 km</td>
+                    <td>12:42</td>
+                    <td>6:22</td>
+                    <td>6:19</td>
+                    <td><span class="badge badge-danger">50%</span></td>
+                    <td>97.6 L</td>
+                    <td><span style="color: #c53030;">0.66</span></td>
+                    <td>25 km/h</td>
+                    <td>152.1 L</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level high" style="width: 62%;"></div></div>
+                            <span style="font-size: 0.68rem;">100L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>MAN58</strong></td>
+                    <td>62.56 km</td>
+                    <td>12:01</td>
+                    <td>6:28</td>
+                    <td>5:32</td>
+                    <td><span class="badge badge-warning">46%</span></td>
+                    <td>66.0 L</td>
+                    <td>0.95</td>
+                    <td>31 km/h</td>
+                    <td>129.5 L</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level high" style="width: 76%;"></div></div>
+                            <span style="font-size: 0.68rem;">122L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>MAN55</strong></td>
+                    <td>61.75 km</td>
+                    <td>12:05</td>
+                    <td>6:20</td>
+                    <td>5:45</td>
+                    <td><span class="badge badge-warning">48%</span></td>
+                    <td>74.8 L</td>
+                    <td>0.83</td>
+                    <td>50 km/h</td>
+                    <td>161.8 L</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level high" style="width: 57%;"></div></div>
+                            <span style="font-size: 0.68rem;">92L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>MAN66</strong></td>
+                    <td>61.40 km</td>
+                    <td>9:52</td>
+                    <td>7:28</td>
+                    <td>2:24</td>
+                    <td><span class="badge badge-success">24%</span></td>
+                    <td>78.9 L</td>
+                    <td>0.78</td>
+                    <td>33 km/h</td>
+                    <td>0</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level medium" style="width: 46%;"></div></div>
+                            <span style="font-size: 0.68rem;">74L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>MAN67</strong></td>
+                    <td>34.79 km</td>
+                    <td>9:01</td>
+                    <td>4:03</td>
+                    <td>4:58</td>
+                    <td><span class="badge badge-danger">55%</span></td>
+                    <td>57.0 L</td>
+                    <td><span style="color: #c53030;">0.61</span></td>
+                    <td>23 km/h</td>
+                    <td>69.0 L</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level high" style="width: 86%;"></div></div>
+                            <span style="font-size: 0.68rem;">137L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="warning">
+                    <td><strong>MAN52</strong></td>
+                    <td>28.43 km</td>
+                    <td>0:00</td>
+                    <td>0:00</td>
+                    <td>0:00</td>
+                    <td><span class="badge badge-info">N/A</span></td>
+                    <td>0 L</td>
+                    <td><span class="badge badge-info">Sensor?</span></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><span class="badge badge-danger">No Data</span></td>
+                </tr>
+                <tr>
+                    <td><strong>MAN57</strong></td>
+                    <td>23.56 km</td>
+                    <td>4:58</td>
+                    <td>2:37</td>
+                    <td>2:21</td>
+                    <td><span class="badge badge-warning">47%</span></td>
+                    <td>26.5 L</td>
+                    <td>0.89</td>
+                    <td>44 km/h</td>
+                    <td>0</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level low" style="width: 14%;"></div></div>
+                            <span style="font-size: 0.68rem; color: #c53030;">22L ⚠️</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>MAN75</strong></td>
+                    <td>22.23 km</td>
+                    <td>4:37</td>
+                    <td>2:36</td>
+                    <td>2:01</td>
+                    <td><span class="badge badge-warning">44%</span></td>
+                    <td>29.9 L</td>
+                    <td>0.74</td>
+                    <td>24 km/h</td>
+                    <td>0</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level medium" style="width: 51%;"></div></div>
+                            <span style="font-size: 0.68rem;">81L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>MAN43</strong></td>
+                    <td>22.13 km</td>
+                    <td>4:41</td>
+                    <td>2:01</td>
+                    <td>2:40</td>
+                    <td><span class="badge badge-danger">57%</span></td>
+                    <td>32.9 L</td>
+                    <td>0.67</td>
+                    <td>32 km/h</td>
+                    <td>0</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level medium" style="width: 39%;"></div></div>
+                            <span style="font-size: 0.68rem;">62L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>MAN18</strong></td>
+                    <td>19.01 km</td>
+                    <td>4:13</td>
+                    <td>2:07</td>
+                    <td>2:06</td>
+                    <td><span class="badge badge-warning">50%</span></td>
+                    <td>28.9 L</td>
+                    <td>0.66</td>
+                    <td>28 km/h</td>
+                    <td>95.6 L</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level high" style="width: 100%;"></div></div>
+                            <span style="font-size: 0.68rem;">167L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>MAN72</strong></td>
+                    <td>13.73 km</td>
+                    <td>2:49</td>
+                    <td>1:25</td>
+                    <td>1:24</td>
+                    <td><span class="badge badge-warning">50%</span></td>
+                    <td>23.2 L</td>
+                    <td>0.59</td>
+                    <td>22 km/h</td>
+                    <td>0</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level high" style="width: 80%;"></div></div>
+                            <span style="font-size: 0.68rem;">127L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="warning">
+                    <td><strong>MAN49</strong></td>
+                    <td>6.97 km</td>
+                    <td>0:59</td>
+                    <td>0:38</td>
+                    <td>0:20</td>
+                    <td><span class="badge badge-success">35%</span></td>
+                    <td>0 L</td>
+                    <td><span class="badge badge-info">Sensor?</span></td>
+                    <td>35 km/h</td>
+                    <td>0</td>
+                    <td><span class="badge badge-danger">No Data</span></td>
+                </tr>
+                <tr class="danger">
+                    <td><strong>Diesel Tanker</strong></td>
+                    <td>2.66 km</td>
+                    <td>2:24</td>
+                    <td>0:13</td>
+                    <td>2:10</td>
+                    <td><span class="badge badge-danger">90%</span></td>
+                    <td>7.2 L</td>
+                    <td><span style="color: #c53030;">0.37</span></td>
+                    <td>24 km/h</td>
+                    <td>0</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level medium" style="width: 51%;"></div></div>
+                            <span style="font-size: 0.68rem;">82L</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="danger">
+                    <td><strong>MAN53</strong></td>
+                    <td>0.49 km</td>
+                    <td>0:31</td>
+                    <td>0:05</td>
+                    <td>0:25</td>
+                    <td><span class="badge badge-danger">81%</span></td>
+                    <td>3.1 L</td>
+                    <td><span style="color: #c53030;">0.16</span></td>
+                    <td>11 km/h</td>
+                    <td>0</td>
+                    <td>
+                        <div class="fuel-gauge">
+                            <div class="fuel-bar"><div class="fuel-level high" style="width: 100%;"></div></div>
+                            <span style="font-size: 0.68rem;">163L</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="section-grid">
+        <!-- Daily Distance Trend -->
+        <div class="section-card">
+            <div class="section-title"><div class="icon">📈</div>Daily Distance Trend (Dec 1-16)</div>
+            <div class="chart-container">
+                <canvas id="distanceTrendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Fuel Consumption vs Filled -->
+        <div class="section-card">
+            <div class="section-title"><div class="icon">⛽</div>Fuel Balance Analysis</div>
+            <div class="chart-container">
+                <canvas id="fuelTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- MTD Performance & Mileage -->
+    <div class="section-grid">
+        <!-- Top Trucks MTD -->
+        <div class="section-card">
+            <div class="section-title"><div class="icon">🏅</div>Top Trucks by Distance (MTD)</div>
+            <div class="chart-container">
+                <canvas id="topTrucksChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Mileage Performance -->
+        <div class="section-card">
+            <div class="section-title"><div class="icon">⚙️</div>Mileage Performance - Dec 16</div>
+            <div class="chart-container">
+                <canvas id="mileageChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Idle Trucks Analysis -->
+    <div class="section-card full-width" style="margin-bottom: 25px;">
+        <div class="section-title"><div class="icon">🚫</div>Idle Trucks Analysis - Dec 16 (17 Trucks Not Used)</div>
+        <div class="insights-grid">
+            <div class="insight-card danger">
+                <div class="insight-title">Zero Engine Hours - No Telematics</div>
+                <div class="insight-text"><strong>MAN11, MAN12, MAN14, MAN20, MAN41, MAN47, MAN48, MAN51, MAN54, MAN68, MAN74, MAN76, MAN78, MAN79, MAN80</strong> - Complete fleet underutilization. No GPS data, no engine activity. Check if breakdown/maintenance or just not assigned.</div>
+            </div>
+            <div class="insight-card warning">
+                <div class="insight-title">MAN56 - Engine Idling Only</div>
+                <div class="insight-text">8 minutes engine time, zero distance, 0.6L fuel consumed. Truck started but never moved - pure fuel waste.</div>
+            </div>
+            <div class="insight-card warning">
+                <div class="insight-title">MAN81 - Parked with Fuel</div>
+                <div class="insight-text">142.2L fuel sitting unused. ~24 hours parked. Fuel could be reallocated to active trucks.</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-title">Fleet Utilization Gap</div>
+                <div class="insight-text">Only 51% (18/35) trucks operational. Consistent pattern across December - needs fleet right-sizing review.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Critical Insights -->
+    <div class="section-card full-width" style="margin-bottom: 25px;">
+        <div class="section-title"><div class="icon">💡</div>Critical Insights & Hidden Patterns</div>
+        <div class="insights-grid">
+            <div class="insight-card danger">
+                <div class="insight-title">🔴 Extreme Idle Time Problem</div>
+                <div class="insight-text">Average idle ratio 47% of engine hours. MAN67 at 55% idle, MAN77 at 52%. Each hour idling wastes ~4L diesel. Estimated daily loss: 200+ liters in idle fuel.</div>
+            </div>
+            <div class="insight-card danger">
+                <div class="insight-title">🔧 Fuel Sensor Failures</div>
+                <div class="insight-text">MAN49, MAN52, MAN80 showing zero fuel data despite movement. MAN71's 84.9 KMPL mileage is impossible - sensor malfunction confirmed.</div>
+            </div>
+            <div class="insight-card warning">
+                <div class="insight-title">⛽ Low Fuel Critical Alerts</div>
+                <div class="insight-text">MAN69 (17L), MAN57 (22L), MAN71 (26L), MAN50 (56L) - 4 trucks critically low. Risk of mid-shift breakdown if not refueled immediately.</div>
+            </div>
+            <div class="insight-card warning">
+                <div class="insight-title">📉 Poor Mileage Performers</div>
+                <div class="insight-text">MAN53 (0.16), Diesel Tanker (0.37), MAN72 (0.59), MAN67 (0.61) - All below 0.7 KMPL. Engine tune-up or driving behavior issues suspected.</div>
+            </div>
+            <div class="insight-card success">
+                <div class="insight-title">✅ Zero Fuel Theft</div>
+                <div class="insight-text">No fuel drains detected on Dec 16. MTD only 55.4L drained (Dec 3 & 7). Fuel security measures working effectively.</div>
+            </div>
+            <div class="insight-card success">
+                <div class="insight-title">🏆 MAN50 Best Efficiency</div>
+                <div class="insight-text">1.07 KMPL mileage with 75.92 km - best performer. Only 40% idle time. Model for driver training.</div>
+            </div>
+            <div class="insight-card warning">
+                <div class="insight-title">⚠️ Diesel Tanker Misuse</div>
+                <div class="insight-text">2:24 engine hours, only 0:13 motion time (90% idle!). 7.2L consumed to move 2.66 km. Tanker operating as stationary fuel pump?</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-title">📊 Fuel Balance Alert</div>
+                <div class="insight-text">MTD consumed 13,626L but only filled 12,626L - deficit of 1,000L. Either tank reserves depleting or measurement gaps exist.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="section-card full-width" style="margin-bottom: 25px;">
+        <div class="section-title"><div class="icon">🎯</div>Priority Recommendations</div>
+        <div class="insights-grid">
+            <div class="insight-card">
+                <div class="insight-title">1️⃣ Idle Time Reduction Program</div>
+                <div class="insight-text">47% average idle time is unacceptable. Implement automatic engine shutoff after 5 mins idle. Target: Reduce to 25% idle ratio. Potential savings: 100L diesel/day.</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-title">2️⃣ Fix Fuel Sensors Immediately</div>
+                <div class="insight-text">MAN49, MAN52, MAN71, MAN80 sensors malfunctioning. Without accurate data, fuel theft detection impossible. Schedule sensor replacement within 48 hours.</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-title">3️⃣ Urgent Refueling</div>
+                <div class="insight-text">Prioritize refueling MAN69 (17L), MAN57 (22L), MAN71 (26L) before next shift. Risk of mid-trip stranding if ignored.</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-title">4️⃣ Fleet Right-Sizing</div>
+                <div class="insight-text">Only 24 of 35 trucks (69%) used in December. Consider reducing fleet by 5-8 trucks or redeploying to other locations.</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-title">5️⃣ Driver Training - Mileage</div>
+                <div class="insight-text">Use MAN50 driver (1.07 KMPL) as trainer. Focus on MAN53, MAN67, Diesel Tanker operators - poorest mileage performers.</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-title">6️⃣ Diesel Tanker Review</div>
+                <div class="insight-text">90% idle time suggests misuse. If operating as stationary pump, consider fixed installation. If delivery vehicle, investigate operational issues.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section-card full-width">
+        <div class="section-title"><div class="icon">📝</div>Executive Summary - December 16, 2025</div>
+        <div class="summary-box">
+            <div class="summary-content" style="font-size: 0.88rem;">
+                <p><strong>Fleet Overview:</strong> Of 35 trucks in the fleet, 18 (51%) were operational on December 16, 2025, covering 713.9 km with 775.7 liters fuel consumption. This is a 7.9% decrease from December 15's 775.5 km distance.</p>
+                <br>
+                <p><strong>Top Performers:</strong> MAN77 led with 77.07 km but has concerning 52% idle time. MAN50 achieved best efficiency at 1.07 KMPL with 75.92 km. MAN69 covered 69.33 km at 0.93 KMPL. MAN71 shows anomalous 84.9 KMPL indicating sensor malfunction.</p>
+                <br>
+                <p><strong>Critical Issues:</strong> (1) Average 47% idle time across fleet - major fuel waste (~200L daily) (2) 4 trucks critically low on fuel requiring immediate attention (3) 4 trucks have faulty fuel sensors (4) 17 trucks completely idle (5) Diesel Tanker operated at 90% idle ratio.</p>
+                <br>
+                <p><strong>Fuel Status:</strong> 754.7 liters refueled through 6 fillings. Zero fuel theft detected. MAN55 received largest fill (161.8L). MTD shows 1,000L consumption-fill deficit requiring investigation.</p>
+                <br>
+                <p><strong>MTD Performance (Dec 1-16):</strong> 13,188.9 km covered, 13,626.0L consumed, 12,625.5L filled. Average mileage 0.97 KMPL. Only 55.4L fuel drained (theft suspected on Dec 3 & 7). Top MTD performer: MAN77 with 1,107.9 km.</p>
+                <br>
+                <p><strong>Immediate Actions Required:</strong> (1) Refuel 4 critically low trucks (2) Repair fuel sensors on 4 trucks (3) Implement idle-reduction program (4) Review Diesel Tanker operational procedures (5) Conduct fleet optimization study.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Generated for December 16, 2025 | Balasore Alloys Limited - Fleet Management System</p>
+        <p>Data Source: truck_reports table | 35 MAN Trucks Tracked</p>
+    </div>
+
+    <script>
+        // Daily Distance Trend
+        new Chart(document.getElementById('distanceTrendChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: ['Dec 1', 'Dec 2', 'Dec 3', 'Dec 4', 'Dec 5', 'Dec 6', 'Dec 7', 'Dec 8', 'Dec 9', 'Dec 10', 'Dec 11', 'Dec 12', 'Dec 13', 'Dec 14', 'Dec 15', 'Dec 16'],
+                datasets: [{
+                    label: 'Distance (KM)',
+                    data: [779, 786, 1015, 839, 790, 844, 968, 661, 907, 810, 908, 649, 707, 1036, 776, 714],
+                    borderColor: '#1e3a5f',
+                    backgroundColor: 'rgba(30, 58, 95, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: function(context) {
+                        return context.dataIndex === 15 ? '#f56565' : '#1e3a5f';
+                    },
+                    pointRadius: function(context) {
+                        return context.dataIndex === 15 ? 6 : 3;
+                    }
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#4a5568', font: { size: 9 } } },
+                    y: { ticks: { color: '#4a5568' }, beginAtZero: false }
+                }
+            }
+        });
+
+        // Fuel Balance Chart
+        new Chart(document.getElementById('fuelTrendChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Dec 1', 'Dec 2', 'Dec 3', 'Dec 4', 'Dec 5', 'Dec 6', 'Dec 7', 'Dec 8', 'Dec 9', 'Dec 10', 'Dec 11', 'Dec 12', 'Dec 13', 'Dec 14', 'Dec 15', 'Dec 16'],
+                datasets: [{
+                    label: 'Fuel Consumed (L)',
+                    data: [880, 981, 1073, 839, 733, 915, 894, 768, 821, 707, 764, 593, 712, 1050, 749, 776],
+                    backgroundColor: 'rgba(245, 101, 101, 0.6)',
+                    borderColor: '#f56565',
+                    borderWidth: 1
+                }, {
+                    label: 'Fuel Filled (L)',
+                    data: [417, 1224, 881, 559, 1264, 328, 1331, 611, 943, 573, 807, 643, 722, 1023, 545, 755],
+                    backgroundColor: 'rgba(72, 187, 120, 0.6)',
+                    borderColor: '#48bb78',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top', labels: { color: '#4a5568', font: { size: 10 } } } },
+                scales: {
+                    x: { ticks: { color: '#4a5568', font: { size: 8 } } },
+                    y: { ticks: { color: '#4a5568' }, beginAtZero: true }
+                }
+            }
+        });
+
+        // Top Trucks MTD
+        new Chart(document.getElementById('topTrucksChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['MAN77', 'MAN58', 'MAN66', 'MAN71', 'MAN65', 'MAN69', 'MAN50', 'MAN57', 'MAN55', 'MAN49'],
+                datasets: [{
+                    label: 'MTD Distance (KM)',
+                    data: [1108, 1070, 1013, 995, 947, 931, 899, 875, 688, 680],
+                    backgroundColor: 'rgba(30, 58, 95, 0.7)',
+                    borderColor: '#1e3a5f',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#4a5568' }, beginAtZero: true },
+                    y: { ticks: { color: '#4a5568', font: { size: 10 } } }
+                }
+            }
+        });
+
+        // Mileage Performance
+        new Chart(document.getElementById('mileageChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['MAN50', 'MAN58', 'MAN69', 'MAN57', 'MAN55', 'MAN66', 'MAN77', 'MAN75', 'MAN43', 'MAN65', 'MAN18', 'MAN67', 'MAN72', 'Tanker', 'MAN53'],
+                datasets: [{
+                    label: 'KMPL',
+                    data: [1.07, 0.95, 0.93, 0.89, 0.83, 0.78, 0.75, 0.74, 0.67, 0.66, 0.66, 0.61, 0.59, 0.37, 0.16],
+                    backgroundColor: function(context) {
+                        const value = context.raw;
+                        if (value >= 0.9) return 'rgba(72, 187, 120, 0.7)';
+                        if (value >= 0.7) return 'rgba(66, 153, 225, 0.7)';
+                        if (value >= 0.5) return 'rgba(237, 137, 54, 0.7)';
+                        return 'rgba(245, 101, 101, 0.7)';
+                    },
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#4a5568', font: { size: 8 } } },
+                    y: { ticks: { color: '#4a5568' }, beginAtZero: true, max: 1.2 }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
