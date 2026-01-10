@@ -13,16 +13,16 @@
 # ============================================================================
 # DEFAULT - Tech Lead reviews everything by default
 # ============================================================================
-* @tech-lead
+* @pramit3084
 
 # ============================================================================
 # CORE INFRASTRUCTURE - Requires Tech Lead Approval
 # ============================================================================
-/app_main.py @tech-lead
-/config_modules/ @tech-lead
-/core/ @tech-lead
-/requirements.txt @tech-lead
-/.env.example @tech-lead
+/app_main.py @pramit3084
+/config_modules/ @pramit3084
+/core/ @pramit3084
+/requirements.txt @pramit3084
+/.env.example @pramit3084
 
 # ============================================================================
 # DEPARTMENT OWNERSHIP
@@ -34,9 +34,9 @@
 /tests/test_furnace.py @furnace-lead
 
 # Geology Department
-/departments/geology/ @geology-lead
-/templates/geology_dashboard.html @geology-lead
-/tests/test_geology.py @geology-lead
+/departments/geology/ @rohit-3093
+/templates/geology_dashboard.html @rohit-3093
+/tests/test_geology.py @rohit-3093
 
 # Quality Control Department
 /departments/qc/ @qc-lead
@@ -49,9 +49,9 @@
 /tests/test_scm.py @scm-lead
 
 # Automobile Department
-/departments/automobile/ @automobile-lead
-/templates/automobile_dashboard.html @automobile-lead
-/tests/test_automobile.py @automobile-lead
+/departments/automobile/ @rohit-3093
+/templates/automobile_dashboard.html @rohit-3093
+/tests/test_automobile.py @rohit-3093
 
 # Customer Relationship Management Department
 /departments/crm/ @crm-lead
