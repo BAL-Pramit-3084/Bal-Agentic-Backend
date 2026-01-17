@@ -62,9 +62,10 @@ class GeologySurveyTemplateEngine:
         self.template_path = template_path
         logger.info(f"Template Engine initialized: {template_path}")
 
-    def generate_dashboard(self, analysis_data: Dict[str, Any], claude_insights_html: str, date: str) -> str:
-        """Generate complete dashboard HTML with real data."""
+    def generate_dashboard(self, analysis_data: Dict[str, Any], claude_insights_html: str, date: str, ai_summary_html: str = None) -> str:
+        """Generate complete dashboard HTML with real data and AI insights."""
         logger.info(f"Generating dashboard for: {date}")
+        self._ai_summary_html = ai_summary_html  # Store for later use
 
         if not os.path.exists(self.template_path):
             raise FileNotFoundError(f"Template not found: {self.template_path}")
@@ -80,6 +81,7 @@ class GeologySurveyTemplateEngine:
             html = self._replace_mtd_section(html, analysis_data)
             html = self._replace_shift_table(html, analysis_data)
             html = self._replace_location_table(html, analysis_data)
+            html = self._replace_mtd_location_table(html, analysis_data)
             html = self._replace_agency_today_table(html, analysis_data)
             html = self._replace_sample_analysis_table(html, analysis_data)
             html = self._replace_plan_vs_actual(html, analysis_data)
@@ -90,7 +92,7 @@ class GeologySurveyTemplateEngine:
             # AI SECTIONS
             html = self._replace_insights_section(html, claude_insights_html)
             html = self._replace_gap_analysis_section(html, analysis_data)
-            html = self._replace_executive_summary(html, analysis_data)
+            html = self._replace_ai_summary(html, analysis_data)
 
             html = self._replace_footer(html, analysis_data)
 
@@ -204,12 +206,7 @@ class GeologySurveyTemplateEngine:
                 html
             )
 
-            # Pattern 8: "Executive Summary - December 16, 2025" → "Executive Summary"
-            html = re.sub(
-                r'(<div class="icon">📝</div>Executive Summary) - [^<]+',
-                r'\1',
-                html
-            )
+            # Pattern 8: No longer needed - "AI Insight Summary" doesn't have dates
 
             # Pattern 9: Remove "MTD" from table headers like "Actual MTD (MT)"
             html = re.sub(
@@ -298,68 +295,59 @@ class GeologySurveyTemplateEngine:
     # =========================================================================
 
     def _replace_mtd_section(self, html: str, data: Dict) -> str:
-        """Replace MTD section title and KPI cards."""
-        is_range = 'start_date' in data and 'end_date' in data
+        """Replace MTD/Periodic Summary section title and KPI cards.
 
-        month = data.get('month', 'December')
-        year = data.get('year', 2025)
-        day = data.get('day', 1)
-        day_ordinal = get_ordinal(day)
-        month_abbrev = month[:3]
+        NEW: Shows ORE, OB, SILT breakdown instead of total excavation.
+        """
+        is_range = 'start_date' in data and 'end_date' in data
 
         # Use period_kpis for date ranges, mtd_kpis for single dates
         kpis = data.get('period_kpis', {}) if is_range else data.get('mtd_kpis', {})
-        total_exc = kpis.get('excavation' if is_range else 'total_excavation', {}).get('formatted', '0')
-        total_trips = kpis.get('trips', {}).get('formatted', '0')
+
+        # Material breakdown values
+        ore_qty = kpis.get('ore_qty', {}).get('formatted', '0')
+        ob_qty = kpis.get('ob_qty', {}).get('formatted', '0')
+        silt_qty = kpis.get('silt_qty', {}).get('formatted', '0')
+        total_trips = kpis.get('trips' if is_range else 'total_trips', {}).get('formatted', '0')
         working_days = kpis.get('working_days', {}).get('formatted', '0')
-        avg_daily = kpis.get('avg_daily_production', {}).get('formatted', '0')
         avg_cr2o3 = kpis.get('avg_cr2o3', {}).get('formatted', '0%')
-        samples = kpis.get('samples_analyzed', {}).get('formatted', '0')
 
-        # Replace MTD title - just "Summary" without any dates
-        pattern_title = r'(<div class="section-title"><div class="icon">📊</div>)[^<]+(</div>)'
-        new_title = 'Summary'
+        logger.info(f"MTD Section values - ORE: {ore_qty}, OB: {ob_qty}, SILT: {silt_qty}, Trips: {total_trips}, Days: {working_days}, Cr2O3: {avg_cr2o3}")
 
-        def title_replacer(m):
-            return m.group(1) + new_title + m.group(2)
-        html = re.sub(pattern_title, title_replacer, html, count=1)
+        # Replace section title "Periodic Summary" -> "Summary"
+        pattern_title = r'(<div class="icon">📊</div>)\s*Periodic Summary'
+        html = re.sub(pattern_title, r'\1 Summary', html, count=1)
 
-        # Replace each KPI card value individually AND remove "MTD" from labels
-        # Total Excavation (remove "MTD" prefix)
-        pattern = r'(<div class="mtd-kpi-card green"><div class="mtd-value green">)[^<]+(</div><div class="kpi-label">)MTD Total Excavation'
-        def exc_replacer(m):
-            return m.group(1) + total_exc + m.group(2) + 'Total Excavation'
-        html = re.sub(pattern, exc_replacer, html, count=1)
+        # Replace each KPI card value - new structure with ORE, OB, SILT
+        # Card 1: ORE (green)
+        pattern = r'(<div class="mtd-kpi-card green">\s*<div class="mtd-value green">)[^<]+(</div>\s*<div class="kpi-label">)[^<]+(</div>)'
+        replacement = rf'\g<1>{ore_qty}\g<2>ORE (MT)\g<3>'
+        html = re.sub(pattern, replacement, html, count=1)
 
-        # Total Trips (remove "MTD" prefix)
-        pattern = r'(<div class="mtd-kpi-card blue"><div class="mtd-value blue">)[^<]+(</div><div class="kpi-label">)MTD Total Trips'
-        def trips_replacer(m):
-            return m.group(1) + total_trips + m.group(2) + 'Total Trips'
-        html = re.sub(pattern, trips_replacer, html, count=1)
+        # Card 2: Overburden (orange)
+        pattern = r'(<div class="mtd-kpi-card orange">\s*<div class="mtd-value orange">)[^<]+(</div>\s*<div class="kpi-label">)[^<]+(</div>)'
+        replacement = rf'\g<1>{ob_qty}\g<2>Overburden (MT)\g<3>'
+        html = re.sub(pattern, replacement, html, count=1)
 
-        # Working Days
-        pattern = r'(<div class="mtd-kpi-card orange"><div class="mtd-value orange">)[^<]+(</div><div class="kpi-label">Working Days)'
-        def days_replacer(m):
-            return m.group(1) + working_days + m.group(2)
-        html = re.sub(pattern, days_replacer, html, count=1)
+        # Card 3: SILT (brown - custom style)
+        pattern = r'(<div class="mtd-kpi-card brown"[^>]*>\s*<div class="mtd-value"[^>]*>)[^<]+(</div>\s*<div class="kpi-label">)[^<]+(</div>)'
+        replacement = rf'\g<1>{silt_qty}\g<2>SILT (MT)\g<3>'
+        html = re.sub(pattern, replacement, html, count=1)
 
-        # Avg Daily Production
-        pattern = r'(<div class="mtd-kpi-card purple"><div class="mtd-value purple">)[^<]+(</div><div class="kpi-label">Avg Daily Production)'
-        def avg_replacer(m):
-            return m.group(1) + avg_daily + m.group(2)
-        html = re.sub(pattern, avg_replacer, html, count=1)
+        # Card 4: Total Trips (blue)
+        pattern = r'(<div class="mtd-kpi-card blue">\s*<div class="mtd-value blue">)[^<]+(</div>\s*<div class="kpi-label">)[^<]+(</div>)'
+        replacement = rf'\g<1>{total_trips}\g<2>Total Trips\g<3>'
+        html = re.sub(pattern, replacement, html, count=1)
 
-        # Avg Cr2O3 (remove "MTD" prefix)
-        pattern = r'(<div class="mtd-kpi-card pink"><div class="mtd-value pink">)[^<]+(</div><div class="kpi-label">)MTD Avg Cr₂O₃'
-        def cr_replacer(m):
-            return m.group(1) + avg_cr2o3 + m.group(2) + 'Avg Cr₂O₃'
-        html = re.sub(pattern, cr_replacer, html, count=1)
+        # Card 5: Working Days (purple)
+        pattern = r'(<div class="mtd-kpi-card purple">\s*<div class="mtd-value purple">)[^<]+(</div>\s*<div class="kpi-label">)[^<]+(</div>)'
+        replacement = rf'\g<1>{working_days}\g<2>Working Days\g<3>'
+        html = re.sub(pattern, replacement, html, count=1)
 
-        # Samples Analyzed
-        pattern = r'(<div class="mtd-kpi-card teal"><div class="mtd-value teal">)[^<]+(</div><div class="kpi-label">Samples Analyzed)'
-        def samples_replacer(m):
-            return m.group(1) + samples + m.group(2)
-        html = re.sub(pattern, samples_replacer, html, count=1)
+        # Card 6: Avg Cr2O3 (pink)
+        pattern = r'(<div class="mtd-kpi-card pink">\s*<div class="mtd-value pink">)[^<]+(</div>\s*<div class="kpi-label">)[^<]+(</div>)'
+        replacement = rf'\g<1>{avg_cr2o3}\g<2>Avg Cr₂O₃\g<3>'
+        html = re.sub(pattern, replacement, html, count=1)
 
         return html
 
@@ -368,21 +356,58 @@ class GeologySurveyTemplateEngine:
     # =========================================================================
 
     def _replace_shift_table(self, html: str, data: Dict) -> str:
-        """Replace shift breakdown table."""
-        shift_data = data.get('shift_breakdown', {})
-        rows = shift_data.get('rows', [])
-        total_trips = shift_data.get('total_trips', 0)
-        total_qty = shift_data.get('total_qty', 0)
+        """Replace shift Plan vs Actual table.
 
-        rows_html = ""
-        for row in rows:
-            shift = row.get('shift', '?')
-            pct = row.get('pct', 0)
-            rows_html += f'                    <tr><td><span class="badge badge-shift-{shift.lower()}">Shift {shift}</span></td><td>{row.get("trips", 0)}</td><td>{format_number(row.get("qty", 0))}</td><td>{pct:.1f}%</td></tr>\n'
+        NEW: Uses shift_plan_vs_actual data with columns:
+        - Shift, Planned (MT), Actual (MT), Achievement %, Variance
+        Falls back to shift_breakdown if shift_plan_vs_actual not available.
+        """
+        # Try new shift_plan_vs_actual first
+        shift_data = data.get('shift_plan_vs_actual', {})
+        has_plan_data = shift_data.get('has_plan_data', False)
 
-        rows_html += f'                    <tr style="background: #f7fafc; font-weight: 600;"><td>Total</td><td>{total_trips}</td><td>{format_number(total_qty)}</td><td>100%</td></tr>'
+        if has_plan_data and shift_data.get('rows'):
+            # Use Plan vs Actual format
+            rows = shift_data.get('rows', [])
+            total_planned = shift_data.get('total_planned', 0)
+            total_actual = shift_data.get('total_actual', 0)
+            total_achievement = shift_data.get('total_achievement_pct', 0)
+            total_variance = shift_data.get('total_variance', 0)
+            total_variance_class = shift_data.get('total_variance_class', '')
+            total_variance_fmt = shift_data.get('total_variance_formatted', '0')
 
-        pattern = r"(<div class=\"section-title\"><div class=\"icon\">🔄</div>Shift-wise Production</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
+            rows_html = ""
+            for row in rows:
+                shift = row.get('shift', '?')
+                planned = row.get('planned', 0)
+                actual = row.get('actual', 0)
+                achievement = row.get('achievement_pct', 0)
+                variance = row.get('variance', 0)
+                variance_class = row.get('variance_class', '')
+                variance_fmt = row.get('variance_formatted', '0')
+
+                rows_html += f'                    <tr><td><span class="badge badge-shift-{shift.lower()}">Shift {shift}</span></td><td>{format_number(planned)}</td><td>{format_number(actual)}</td><td>{achievement:.1f}%</td><td class="{variance_class}">{variance_fmt}</td></tr>\n'
+
+            rows_html += f'                    <tr style="background: #f7fafc; font-weight: 600;"><td>Total</td><td>{format_number(total_planned)}</td><td>{format_number(total_actual)}</td><td>{total_achievement:.1f}%</td><td class="{total_variance_class}">{total_variance_fmt}</td></tr>'
+        else:
+            # Fall back to old shift_breakdown format (no plan data available)
+            shift_data = data.get('shift_breakdown', {})
+            rows = shift_data.get('rows', [])
+            total_trips = shift_data.get('total_trips', 0)
+            total_qty = shift_data.get('total_qty', 0)
+
+            rows_html = ""
+            for row in rows:
+                shift = row.get('shift', '?')
+                qty = row.get('qty', 0)
+                pct = row.get('pct', 0)
+                # Show actual as both planned and actual (no plan data)
+                rows_html += f'                    <tr><td><span class="badge badge-shift-{shift.lower()}">Shift {shift}</span></td><td>-</td><td>{format_number(qty)}</td><td>{pct:.1f}%</td><td>-</td></tr>\n'
+
+            rows_html += f'                    <tr style="background: #f7fafc; font-weight: 600;"><td>Total</td><td>-</td><td>{format_number(total_qty)}</td><td>100%</td><td>-</td></tr>'
+
+        # Pattern handles both "Shift-wise Production" and "Shift-wise Plan vs Actual" titles
+        pattern = r"(<div class=\"section-title\">\s*<div class=\"icon\">🔄</div>Shift-wise (?:Production|Plan vs Actual)\s*</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
 
         def replacer(match):
             return match.group(1) + "\n" + rows_html + "\n                " + match.group(2)
@@ -410,15 +435,59 @@ class GeologySurveyTemplateEngine:
             return match.group(1) + "\n" + rows_html + "\n                " + match.group(2)
 
         html = re.sub(pattern, replacer, html, flags=re.DOTALL)
+
+        # Also fix the pattern to handle whitespace
+        pattern2 = r"(<div class=\"section-title\">\s*<div class=\"icon\">📍</div>Location-wise Excavation\s*</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
+        html = re.sub(pattern2, replacer, html, flags=re.DOTALL)
+
+        return html
+
+    def _replace_mtd_location_table(self, html: str, data: Dict) -> str:
+        """Replace MTD Location Performance table.
+
+        For date range mode, uses mtd_location_performance data.
+        """
+        is_range = 'start_date' in data and 'end_date' in data
+        loc_data = data.get('mtd_location_performance', {})
+        rows = loc_data.get('rows', [])
+
+        if not rows:
+            rows_html = '                    <tr><td colspan="4" style="text-align: center;">No location data</td></tr>'
+        else:
+            rows_html = ""
+            for row in rows:
+                pct = row.get('pct', 0)
+                rows_html += f'                    <tr><td>{row.get("location", "Unknown")}</td><td>{row.get("trips", 0)}</td><td>{format_number(row.get("qty", 0))}</td><td>{pct:.1f}%</td></tr>\n'
+
+        # Pattern handles whitespace between tags
+        pattern = r"(<div class=\"section-title\">\s*<div class=\"icon\">🗺️</div>MTD Location Performance\s*</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
+
+        def replacer(match):
+            return match.group(1) + "\n" + rows_html + "                " + match.group(2)
+
+        html = re.sub(pattern, replacer, html, flags=re.DOTALL)
         return html
 
     def _replace_agency_today_table(self, html: str, data: Dict) -> str:
-        """Replace today's agency performance table."""
+        """Replace today's agency performance table.
+
+        For date range mode, uses the same data as MTD (agency_performance.rows).
+        For single date mode, uses agency_performance.today.rows.
+        """
+        is_range = 'start_date' in data and 'end_date' in data
         agency_data = data.get('agency_performance', {})
-        today = agency_data.get('today', {})
-        rows = today.get('rows', [])
-        total_trips = today.get('total_trips', 0)
-        total_qty = today.get('total_qty', 0)
+
+        # Date range mode: use rows directly (same as MTD)
+        # Single date mode: use 'today' sub-object
+        if is_range:
+            rows = agency_data.get('rows', [])
+            total_trips = agency_data.get('total_trips', 0)
+            total_qty = agency_data.get('total_qty', 0)
+        else:
+            today = agency_data.get('today', {})
+            rows = today.get('rows', [])
+            total_trips = today.get('total_trips', 0)
+            total_qty = today.get('total_qty', 0)
 
         rows_html = ""
         for row in rows:
@@ -427,7 +496,8 @@ class GeologySurveyTemplateEngine:
 
         rows_html += f'                    <tr style="background: #f7fafc; font-weight: 600;"><td>Total</td><td>{total_trips}</td><td>{format_number(total_qty)}</td><td>100%</td></tr>'
 
-        pattern = r"(<div class=\"section-title\"><div class=\"icon\">🏢</div>Agency Performance - </div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
+        # Pattern handles whitespace and various title formats
+        pattern = r"(<div class=\"section-title\">\s*<div class=\"icon\">🏢</div>Agency Performance[^<]*</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
 
         def replacer(match):
             return match.group(1) + "\n" + rows_html + "\n                " + match.group(2)
@@ -456,12 +526,18 @@ class GeologySurveyTemplateEngine:
         """Replace sample analysis table."""
         sample_data = data.get('sample_analysis', {})
         rows = sample_data.get('rows', [])
-        date_fmt = data.get('date_formatted', 'Today')
 
-        # Update title
-        pattern = r'(<div class="section-title"><div class="icon">🔬</div>)[^<]+(</div>)'
+        # Determine title based on mode (single date vs range)
+        is_range = 'start_date' in data and 'end_date' in data
+        if is_range:
+            title_suffix = "Period"
+        else:
+            title_suffix = data.get('date_formatted', 'Today')
+
+        # Update title - pattern handles whitespace between tags
+        pattern = r'(<div class="section-title">\s*<div class="icon">🔬</div>)[^<]+(</div>)'
         def title_replacer(m):
-            return f'{m.group(1)}Geology Face Sample Analysis - {date_fmt}{m.group(2)}'
+            return f'{m.group(1)}Geology Face Sample Analysis - {title_suffix}{m.group(2)}'
         html = re.sub(pattern, title_replacer, html, count=1)
 
         if not rows:
@@ -520,55 +596,68 @@ class GeologySurveyTemplateEngine:
 
         rows_html += f'                <tr style="background: #f7fafc; font-weight: 600;"><td colspan="2">TOTAL ORE</td><td>{format_number(t_planned)}</td><td>{format_number(t_actual)}</td><td>{t_ach:.1f}%</td><td>{format_number(t_rem)}</td><td><span class="badge" style="{t_style}">{t_status}</span></td></tr>'
 
-        pattern = r"(<div class=\"section-title\"><div class=\"icon\">🎯</div>[^<]*Monthly Plan vs Actual Progress</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
+        # Build dynamic title based on month/year from data
+        month_name = data.get('month', 'Current Month')
+        year = data.get('year', '')
+        is_range = 'start_date' in data and 'end_date' in data
+
+        if is_range:
+            title_text = f"Period - Plan vs Actual Progress"
+        else:
+            title_text = f"{month_name} {year} - Monthly Plan vs Actual Progress"
+
+        # Pattern with \s* to handle whitespace/newlines between tags
+        # Matches any title ending in "Plan vs Actual Progress" (e.g., "December 2025 - Monthly Plan vs Actual Progress")
+        pattern = r"(<div class=\"section-title\">\s*<div class=\"icon\">🎯</div>)[^<]*Plan vs Actual Progress\s*(</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
 
         def table_replacer(match):
-            return match.group(1) + "\n" + rows_html + "\n            " + match.group(2)
+            return match.group(1) + title_text + match.group(2) + "\n" + rows_html + "\n            " + match.group(3)
 
         html = re.sub(pattern, table_replacer, html, flags=re.DOTALL)
 
         # Update progress bar
         is_range = 'start_date' in data and 'end_date' in data
-        days_elapsed = gap.get('days_elapsed', data.get('days_elapsed', 0))
-        days_in_month = data.get('days_in_month', 31)
-        time_pct = (days_elapsed / days_in_month * 100) if days_in_month > 0 else 0
 
-        # Replace progress label - different text for range vs single date
         if is_range:
-            # For date range: HIDE the progress bar entirely (user requested removal)
-            # Remove the entire progress section
-            progress_pattern = r'<div class="progress-section">.*?</div>\s*</div>\s*</div>'
-            html = re.sub(progress_pattern, '', html, flags=re.DOTALL, count=1)
+            # For date range: show "Period Progress (X working days)"
+            working_days = data.get('period_kpis', {}).get('working_days', {}).get('value', 0)
+            start_date = data.get('start_date', '')
+            end_date = data.get('end_date', '')
+            progress_title = "Period Progress"
+            progress_text = f'{working_days} working days ({start_date} to {end_date})'
         else:
             # For single date: show "Monthly Target Achievement (X days / Y days = Z% time elapsed)"
+            days_elapsed = gap.get('days_elapsed', data.get('days_elapsed', 0))
+            days_in_month = data.get('days_in_month', 31)
+            time_pct = (days_elapsed / days_in_month * 100) if days_in_month > 0 else 0
             progress_title = "Monthly Target Achievement"
             progress_text = f'{days_elapsed} days / {days_in_month} days = {time_pct:.1f}% time elapsed'
 
-            old_label = r'<div class="progress-label"><span>(Monthly|Period) Target Achievement \([^)]+\)</span><span>[\d.]+%</span></div>'
-            new_label = f'<div class="progress-label"><span>{progress_title} ({progress_text})</span><span>{t_ach:.1f}%</span></div>'
-            html = re.sub(old_label, new_label, html, count=1)
+        old_label = r'<div class="progress-label"><span>[^<]+</span><span>[\d.]+%[^<]*</span></div>'
+        new_label = f'<div class="progress-label"><span>{progress_title} ({progress_text})</span><span>{t_ach:.1f}% Achieved</span></div>'
+        html = re.sub(old_label, new_label, html, count=1)
 
-            # Replace progress bar width
-            old_width = r'(<div class="progress-bar" style="height: 20px;"><div class="progress-fill" style="width: )[\d.]+(%;)'
-            def width_replacer(m):
-                return f'{m.group(1)}{t_ach}{m.group(2)}'
-            html = re.sub(old_width, width_replacer, html, count=1)
+        # Replace progress bar width
+        old_width = r'(<div class="progress-bar" style="height: 20px;"><div class="progress-fill" style="width: )[\d.]+(%;)'
+        def width_replacer(m):
+            return f'{m.group(1)}{t_ach}{m.group(2)}'
+        html = re.sub(old_width, width_replacer, html, count=1)
 
         return html
 
     def _replace_excavation_details(self, html: str, data: Dict) -> str:
         """Replace excavation details table."""
         details = data.get('excavation_details', [])
-        date_fmt = data.get('date_formatted', 'Today')
 
-        # Update title
-        pattern = r'(<div class="section-title"><div class="icon">📋</div>Detailed Excavation Records - )[^<]+(</div>)'
-        def title_replacer(m):
-            return f'{m.group(1)}{date_fmt}{m.group(2)}'
-        html = re.sub(pattern, title_replacer, html, count=1)
+        # Determine title based on mode
+        is_range = 'start_date' in data and 'end_date' in data
+        if is_range:
+            title_suffix = "Period"
+        else:
+            title_suffix = data.get('date_formatted', 'Today')
 
         if not details:
-            rows_html = '                <tr><td colspan="7" style="text-align: center; color: #718096;">No excavation records for today</td></tr>'
+            rows_html = '                <tr><td colspan="7" style="text-align: center; color: #718096;">No excavation records</td></tr>'
         else:
             rows_html = ""
             for row in details:
@@ -576,19 +665,37 @@ class GeologySurveyTemplateEngine:
                 avg_load = row.get('avg_load', 0)
                 rows_html += f'                <tr><td><span class="badge badge-shift-{shift.lower()}">{shift}</span></td><td>{row.get("location", "Unknown")}</td><td>{row.get("material", "Unknown")}</td><td>{row.get("agency", "Unknown")}</td><td>{row.get("trips", 0)}</td><td>{format_number(row.get("qty", 0))}</td><td>{avg_load:.1f}</td></tr>\n'
 
-        pattern = r"(<div class=\"section-title\"><div class=\"icon\">📋</div>Detailed Excavation Records[^<]*</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
+        # Pattern handles whitespace between tags, scroll container, and matches any title variant
+        pattern = r"(<div class=\"section-title\">\s*<div class=\"icon\">📋</div>)Detailed Excavation Records[^<]*(</div>\s*<div class=\"table-scroll-container\"[^>]*>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
 
         def replacer(match):
-            return match.group(1) + "\n" + rows_html + "            " + match.group(2)
+            return f'{match.group(1)}Detailed Excavation Records - {title_suffix}{match.group(2)}\n{rows_html}            {match.group(3)}'
 
-        html = re.sub(pattern, replacer, html, flags=re.DOTALL)
-        return html
+        result = re.sub(pattern, replacer, html, flags=re.DOTALL)
+
+        # Fallback: try pattern without scroll container (for backwards compatibility)
+        if result == html:
+            pattern_old = r"(<div class=\"section-title\">\s*<div class=\"icon\">📋</div>)Detailed Excavation Records[^<]*(</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
+            result = re.sub(pattern_old, replacer, html, flags=re.DOTALL)
+
+        return result
 
     def _replace_mtd_agency_table(self, html: str, data: Dict) -> str:
-        """Replace MTD agency performance table."""
+        """Replace MTD agency performance table.
+
+        Handles both single date mode (agency_performance.mtd.rows) and
+        date range mode (agency_performance.rows directly).
+        """
+        is_range = 'start_date' in data and 'end_date' in data
         agency_data = data.get('agency_performance', {})
-        mtd = agency_data.get('mtd', {})
-        rows = mtd.get('rows', [])
+
+        # Date range mode: rows are at top level
+        # Single date mode: rows are under 'mtd' key
+        if is_range:
+            rows = agency_data.get('rows', [])
+        else:
+            mtd = agency_data.get('mtd', {})
+            rows = mtd.get('rows', [])
 
         if not rows:
             rows_html = '                    <tr><td colspan="4" style="text-align: center;">No MTD data</td></tr>'
@@ -598,7 +705,8 @@ class GeologySurveyTemplateEngine:
                 pct = row.get('pct', 0)
                 rows_html += f'                    <tr><td>{row.get("agency", "Unknown")}</td><td>{format_number(row.get("trips", 0))}</td><td>{format_number(row.get("qty", 0))}</td><td>{pct:.1f}%</td></tr>\n'
 
-        pattern = r"(<div class=\"section-title\"><div class=\"icon\">🏭</div>MTD Agency Performance</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
+        # Pattern handles whitespace between tags - matches both "MTD Agency Performance" and "Agency Performance"
+        pattern = r"(<div class=\"section-title\">\s*<div class=\"icon\">🏭</div>(?:MTD )?Agency Performance\s*</div>\s*<table class=\"data-table\">\s*<thead>.*?</thead>\s*<tbody>).*?(</tbody>)"
 
         def replacer(match):
             return match.group(1) + "\n" + rows_html + "                " + match.group(2)
@@ -608,8 +716,9 @@ class GeologySurveyTemplateEngine:
 
     def _replace_mtd_quality_stats(self, html: str, data: Dict) -> str:
         """Replace MTD quality statistics."""
-        stats = data.get('mtd_quality_stats', {})
         is_range = 'start_date' in data and 'end_date' in data
+        # Use quality_stats for date range mode, mtd_quality_stats for single date
+        stats = data.get('quality_stats', {}) if is_range else data.get('mtd_quality_stats', {})
 
         # Replace title: "Today's Quality Summary" → "Period Quality Summary" if range mode
         quality_title = "Period Quality Summary" if is_range else "Today's Quality Summary"
@@ -628,7 +737,8 @@ class GeologySurveyTemplateEngine:
         ]
 
         for metric_name, value in replacements:
-            pattern = f'(<span class="metric-name">{metric_name}</span><span class="metric-value">)[^<]+(</span>)'
+            # Pattern handles whitespace/newlines between tags
+            pattern = f'(<span class="metric-name">{re.escape(metric_name)}</span>\\s*<span\\s*class="metric-value">)[^<]+(</span>)'
             def make_replacer(val):
                 return lambda m: f'{m.group(1)}{val}{m.group(2)}'
             html = re.sub(pattern, make_replacer(value), html, count=1)
@@ -645,7 +755,8 @@ class GeologySurveyTemplateEngine:
             logger.warning("No Claude insights HTML provided")
             return html
 
-        pattern = r'(<div class="section-title"><div class="icon">💡</div>Critical Insights & Hidden Patterns</div>\s*<div class="insights-grid">).*?(</div>\s*</div>\s*<div class="section-card full-width"[^>]*>\s*<div class="section-title"><div class="icon">🎯</div>)'
+        # Pattern handles whitespace between tags
+        pattern = r'(<div class="section-title">\s*<div class="icon">💡</div>Critical Insights & Hidden Patterns\s*</div>\s*<div class="insights-grid">).*?(</div>\s*</div>\s*<div class="section-card full-width"[^>]*>\s*<div class="section-title">\s*<div class="icon">🎯</div>)'
 
         def replacer(match):
             return match.group(1) + "\n            " + claude_insights_html + "\n        " + match.group(2)
@@ -655,25 +766,50 @@ class GeologySurveyTemplateEngine:
 
     def _replace_gap_analysis_section(self, html: str, data: Dict) -> str:
         """Replace Gap Analysis & Recommendations section."""
+        is_range = 'start_date' in data and 'end_date' in data
         gap = data.get('gap_analysis', {})
-        mtd_kpis = data.get('mtd_kpis', {})
+
+        # Get KPIs based on mode
+        if is_range:
+            period_kpis = data.get('period_kpis', {})
+            avg_daily = gap.get('avg_daily_production', 0)
+        else:
+            mtd_kpis = data.get('mtd_kpis', {})
+            avg_daily = mtd_kpis.get('avg_daily_production', {}).get('value', 0)
 
         total_planned = gap.get('total_planned', 0)
+        total_actual = gap.get('total_actual', 0)
+        achievement_pct = gap.get('achievement_pct', 0)
         remaining = gap.get('remaining_target', 0)
         days_remaining = gap.get('days_remaining', 0)
+        working_days = gap.get('working_days', 0)
         required_daily = gap.get('required_daily_production', 0)
-        avg_daily = mtd_kpis.get('avg_daily_production', {}).get('value', 0)
         increase_pct = gap.get('increase_needed_pct', 0)
         expected_month_end = gap.get('expected_month_end', 0)
         expected_achievement = gap.get('expected_achievement_pct', 0)
 
-        summary_html = f'''<div class="summary-box">
+        # Build different content for range vs single date
+        if is_range:
+            days_in_range = gap.get('days_in_range', 0)
+            summary_html = f'''<div class="summary-box">
+            <div class="summary-title">📌 Period Production Analysis</div>
+            <div class="summary-content">
+                <p><strong>Period Performance:</strong> Over {working_days} working days, total production reached <strong>{format_number(total_actual)} MT</strong>, averaging <strong>{format_number(avg_daily)} MT/day</strong>.</p><br>
+                <p><strong>Monthly Target Progress:</strong> Current production represents <strong>{achievement_pct:.1f}%</strong> of the monthly target ({format_number(total_planned)} MT). Remaining target: <strong>{format_number(remaining)} MT</strong>.</p><br>
+                <p><strong>Projection:</strong> At current pace, expected month-end production is approximately <strong>{format_number(expected_month_end)} MT ({expected_achievement:.1f}% of plan)</strong>. To meet target, daily production needs to increase by <strong>{increase_pct:.0f}%</strong> to {format_number(required_daily)} MT/day.</p>
+            </div>
+        </div>'''
+        else:
+            summary_html = f'''<div class="summary-box">
             <div class="summary-title">📌 Production Gap Analysis</div>
             <div class="summary-content">
                 <p><strong>Required Daily Production for Target:</strong> To achieve the monthly target of {format_number(total_planned)} MT, the remaining {days_remaining} days need to produce {format_number(remaining)} MT, requiring an average of <strong>{format_number(required_daily)} MT/day</strong> - which is <strong>{increase_pct:.0f}% higher</strong> than the current average of {format_number(avg_daily)} MT/day.</p><br>
                 <p><strong>Realistic Adjusted Target:</strong> At current pace ({format_number(avg_daily)} MT/day), expected month-end production is approximately <strong>{format_number(expected_month_end)} MT ({expected_achievement:.1f}% of plan)</strong>.</p>
             </div>
-        </div>
+        </div>'''
+
+        # Add recommendations grid
+        summary_html += '''
         <div class="insights-grid" style="margin-top: 20px;">
             <div class="insight-card"><div class="insight-title">1️⃣ Activate DVS West & East</div><div class="insight-text">Immediate mobilization needed for DVS West and DVS East locations to recover planned tonnage.</div></div>
             <div class="insight-card"><div class="insight-title">2️⃣ Shift Productivity Review</div><div class="insight-text">Review shift-wise performance. Implement corrective actions for underperforming shifts.</div></div>
@@ -683,7 +819,8 @@ class GeologySurveyTemplateEngine:
             <div class="insight-card"><div class="insight-title">6️⃣ Agency Diversification</div><div class="insight-text">Consider engaging additional agencies to reduce dependency risk.</div></div>
         </div>'''
 
-        pattern = r'(<div class="section-title"><div class="icon">🎯</div>Gap Analysis & Recommendations</div>\s*)<div class="summary-box">.*?</div>\s*<div class="insights-grid"[^>]*>.*?</div>\s*</div>\s*(</div>\s*<div class="section-card full-width">\s*<div class="section-title"><div class="icon">📝</div>)'
+        # Pattern handles whitespace between tags
+        pattern = r'(<div class="section-title">\s*<div class="icon">🎯</div>Gap Analysis & Recommendations\s*</div>\s*)<div class="summary-box">.*?</div>\s*<div class="insights-grid"[^>]*>.*?</div>\s*</div>\s*(</div>\s*<div class="section-card full-width">\s*<div class="section-title">\s*<div class="icon">📝</div>)'
 
         def replacer(match):
             return match.group(1) + summary_html + "\n    " + match.group(2)
@@ -691,76 +828,21 @@ class GeologySurveyTemplateEngine:
         html = re.sub(pattern, replacer, html, flags=re.DOTALL)
         return html
 
-    def _replace_executive_summary(self, html: str, data: Dict) -> str:
-        """Replace Executive Summary section."""
-        is_range = 'start_date' in data and 'end_date' in data
+    def _replace_ai_summary(self, html: str, data: Dict) -> str:
+        """Replace AI Insight Summary section with LLM-generated content."""
+        # Get the AI summary from instance variable (set in generate_dashboard)
+        ai_summary = getattr(self, '_ai_summary_html', None)
 
-        today_kpis = data.get('today_kpis', {})
-        mtd_kpis = data.get('mtd_kpis', {})
-        period_kpis = data.get('period_kpis', {})
-        gap = data.get('gap_analysis', {})
-        quality_stats = data.get('mtd_quality_stats', {}) if not is_range else data.get('quality_stats', {})
-        date_fmt = data.get('date_formatted', 'Today')
+        if not ai_summary:
+            # Fallback if no AI summary available
+            ai_summary = "<p>AI summary generation in progress...</p>"
 
-        # Update section title
-        pattern = r'(<div class="section-title"><div class="icon">📝</div>Executive Summary - )[^<]+(</div>)'
-        def title_replacer(m):
-            return f'{m.group(1)}{date_fmt}{m.group(2)}'
-        html = re.sub(pattern, title_replacer, html, count=1)
-
-        # Build content - use period_kpis for date ranges
-        if is_range:
-            # For date ranges, use period_kpis
-            td_qty = 0  # No single day data in ranges
-            td_trips = 0
-            active_locs = 0
-            td_cr2o3 = 0
-            td_ratio = 0
-            mtd_qty = period_kpis.get('excavation', {}).get('value', 0)
-            working_days = period_kpis.get('working_days', {}).get('value', 0)
-            avg_daily = period_kpis.get('avg_daily_production', {}).get('value', 0)
-        else:
-            # For single date, use today_kpis and mtd_kpis
-            td_qty = today_kpis.get('excavation', {}).get('value', 0)
-            td_trips = today_kpis.get('trips', {}).get('value', 0)
-            active_locs = today_kpis.get('active_locations', {}).get('value', 0)
-            td_cr2o3 = today_kpis.get('avg_cr2o3', {}).get('value', 0)
-            td_ratio = today_kpis.get('avg_ratio', {}).get('value', 0)
-            mtd_qty = mtd_kpis.get('total_excavation', {}).get('value', 0)
-            working_days = mtd_kpis.get('working_days', {}).get('value', 0)
-            avg_daily = mtd_kpis.get('avg_daily_production', {}).get('value', 0)
-
-        total_planned = gap.get('total_planned', 0)
-        ach_pct = gap.get('achievement_pct', 0)
-        increase_pct = gap.get('increase_needed_pct', 0)
-        avg_cr2o3 = quality_stats.get('avg_cr2o3', 0)
-        avg_ratio = quality_stats.get('avg_ratio', 0)
-
-        if td_qty > 0:
-            day_text = f"<strong>Day Performance:</strong> {date_fmt} recorded {format_number(td_qty)} MT excavation across {td_trips} trips from {active_locs} active locations. Quality: Cr₂O₃ {td_cr2o3:.1f}%, Cr:Fe ratio {td_ratio:.2f}."
-        else:
-            day_text = f"<strong>Day Performance:</strong> No excavation activity recorded on {date_fmt}."
-
-        mtd_text = f"<strong>Periodic Status:</strong> Total MTD production {format_number(mtd_qty)} MT ({ach_pct:.1f}% of {format_number(total_planned)} MT target) across {working_days} working days, averaging {format_number(avg_daily)} MT/day."
-
-        if ach_pct < 80:
-            concern_text = f"<strong>Critical Concerns:</strong> Operation behind plan requiring {increase_pct:.0f}% productivity increase."
-        else:
-            concern_text = "<strong>Status:</strong> Operations progressing well."
-
-        positive_text = f"<strong>Positive Indicators:</strong> MTD Cr₂O₃ at {avg_cr2o3:.1f}%, Cr:Fe ratio {avg_ratio:.2f}."
-        actions_text = "<strong>Actions Required:</strong> Mobilize dormant locations, optimize load efficiency, expand shift operations."
-
-        summary_content = f'''<p>{day_text}</p><br>
-                <p>{mtd_text}</p><br>
-                <p>{concern_text}</p><br>
-                <p>{positive_text}</p><br>
-                <p>{actions_text}</p>'''
-
-        pattern = r'(<div class="section-title"><div class="icon">📝</div>Executive Summary[^<]*</div>\s*<div class="summary-box">\s*<div class="summary-content"[^>]*>).*?(</div>\s*</div>\s*</div>\s*<div class="footer">)'
+        # Pattern matches the new AI Insight Summary section
+        # Looking for: <div class="icon">🤖</div>AI Insight Summary
+        pattern = r'(<div class="section-title">\s*<div class="icon">🤖</div>AI Insight Summary\s*</div>\s*<div class="summary-box">\s*<div class="summary-content[^"]*"[^>]*>).*?(</div>\s*</div>\s*</div>\s*<div class="footer">)'
 
         def replacer(match):
-            return match.group(1) + "\n                " + summary_content + "\n            " + match.group(2)
+            return match.group(1) + "\n                " + ai_summary + "\n            " + match.group(2)
 
         html = re.sub(pattern, replacer, html, flags=re.DOTALL)
         return html
@@ -792,7 +874,12 @@ class GeologySurveyTemplateEngine:
 
         # SHIFT CHART - new Chart(document.getElementById('shiftChart')...
         # Pattern: data: [280, 760, 270]
-        shift = data.get('shift_breakdown', {}).get('chart', {})
+        # Try shift_plan_vs_actual first, then fall back to shift_breakdown
+        shift_plan = data.get('shift_plan_vs_actual', {})
+        if shift_plan.get('has_plan_data') and shift_plan.get('chart'):
+            shift = shift_plan.get('chart', {})
+        else:
+            shift = data.get('shift_breakdown', {}).get('chart', {})
         shift_labels = shift.get('labels', ['Shift A', 'Shift B', 'Shift C'])
         shift_data = shift.get('data', [0, 0, 0])
 
@@ -871,8 +958,12 @@ class GeologySurveyTemplateEngine:
             return f"{m.group(1)}{to_js_array(ratio_data if ratio_data else [0])}"
         html = re.sub(pattern, ratio_replacer, html)
 
-        # MTD LOCATION CHART - ALWAYS replace
-        mtd_loc = data.get('mtd_location_performance', {}).get('chart', {})
+        # MTD/LOCATION PERFORMANCE CHART - Check both keys for date range vs single date mode
+        is_range = 'start_date' in data and 'end_date' in data
+        if is_range:
+            mtd_loc = data.get('location_performance', {}).get('chart', {})
+        else:
+            mtd_loc = data.get('mtd_location_performance', {}).get('chart', {})
         mtd_labels = mtd_loc.get('labels', [])
         mtd_data = mtd_loc.get('data', [])
 

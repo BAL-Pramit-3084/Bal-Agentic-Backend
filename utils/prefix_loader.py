@@ -1,7 +1,7 @@
 """
 utils/prefix_loader.py
 
-Prefix Loader for God’s Eye System
+Prefix Loader
 -----------------------------------
 
 This module expands department access tokens (like "env", "mining", "security", "all")
@@ -57,7 +57,13 @@ class PrefixLoader:
         """
         q = "SELECT dept_name, dept_short_name, table_prefixes FROM department_master"
 
-        result = {}
+        # Default prefixes (Fallback if DB fails or missing entries)
+        result = {
+            "env": ["kpi_env_", "env_"],
+            "geology": ["mines_"],
+            "automobile": ["truck_"],
+        }
+
         conn = None
         cursor = None
 
@@ -84,8 +90,8 @@ class PrefixLoader:
             return result
 
         except Exception:
-            logger.exception("Failed loading department_master")
-            return {}
+            logger.exception("Failed loading department_master (using defaults)")
+            return result
 
         finally:
             if cursor:

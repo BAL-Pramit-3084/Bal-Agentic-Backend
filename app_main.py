@@ -249,29 +249,53 @@ db_connector = DatabaseConnector()
 #     logger.warning("⚠️  Claude API not configured - chatbot will be disabled")
 
 # ============================================================================
-# NEW CODE - LOCAL LLM CLIENT (ACTIVE)
+# OPENAI API CLIENT (ACTIVE - For Chatbot)
 # ============================================================================
-llm_client = None  # Will be used for both chatbot and insights
+llm_client = None  # Will be used for chatbot
 
-if LocalLLMConfig.is_configured():
+openai_api_key = os.getenv("OPENAI_API_KEY", "")
+openai_model = os.getenv("OPENAI_MODEL", "gpt-4o")
+openai_temperature = float(os.getenv("OPENAI_TEMPERATURE", "0.3"))
+openai_max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "4096"))
+
+if openai_api_key:
     try:
-        llm_client = OpenAI(
-            api_key=LocalLLMConfig.API_KEY,
-            base_url=LocalLLMConfig.BASE_URL
-        )
+        llm_client = OpenAI(api_key=openai_api_key)
         logger.info("="*70)
-        logger.info("✅ LOCAL LLM CLIENT INITIALIZED")
-        logger.info(f"   Model: {LocalLLMConfig.MODEL}")
-        logger.info(f"   Endpoint: {LocalLLMConfig.BASE_URL}")
-        logger.info(f"   SSH Tunnel Required: {LocalLLMConfig.SSH_TUNNEL_COMMAND}")
+        logger.info("✅ OPENAI API CLIENT INITIALIZED (For Chatbot)")
+        logger.info(f"   Model: {openai_model}")
+        logger.info(f"   Temperature: {openai_temperature}")
+        logger.info(f"   Max Tokens: {openai_max_tokens}")
         logger.info("="*70)
     except Exception as e:
         llm_client = None
-        logger.error(f"❌ Could not initialize Local LLM client: {e}")
-        logger.error(f"   Ensure SSH tunnel is active: {LocalLLMConfig.SSH_TUNNEL_COMMAND}")
+        logger.error(f"❌ Could not initialize OpenAI client: {e}")
 else:
-    logger.warning("⚠️  Local LLM not configured - AI features will be disabled")
-    logger.warning(f"   Set LOCAL_LLM_ENABLED=true in .env to enable")
+    logger.warning("⚠️  OpenAI API key not configured - Chatbot will be disabled")
+    logger.warning("   Set OPENAI_API_KEY in .env to enable")
+
+# ============================================================================
+# LOCAL LLM CLIENT (COMMENTED OUT - Preserved for rollback)
+# ============================================================================
+# if LocalLLMConfig.is_configured():
+#     try:
+#         llm_client = OpenAI(
+#             api_key=LocalLLMConfig.API_KEY,
+#             base_url=LocalLLMConfig.BASE_URL
+#         )
+#         logger.info("="*70)
+#         logger.info("✅ LOCAL LLM CLIENT INITIALIZED")
+#         logger.info(f"   Model: {LocalLLMConfig.MODEL}")
+#         logger.info(f"   Endpoint: {LocalLLMConfig.BASE_URL}")
+#         logger.info(f"   SSH Tunnel Required: {LocalLLMConfig.SSH_TUNNEL_COMMAND}")
+#         logger.info("="*70)
+#     except Exception as e:
+#         llm_client = None
+#         logger.error(f"❌ Could not initialize Local LLM client: {e}")
+#         logger.error(f"   Ensure SSH tunnel is active: {LocalLLMConfig.SSH_TUNNEL_COMMAND}")
+# else:
+#     logger.warning("⚠️  Local LLM not configured - AI features will be disabled")
+#     logger.warning(f"   Set LOCAL_LLM_ENABLED=true in .env to enable")
 
 # Backward compatibility alias for existing code
 claude_client = llm_client  # This ensures existing checks like "if claude_client:" still work
@@ -1212,24 +1236,59 @@ def _generate_geology_dashboard_internal(user, ip_address: str, date_str: str = 
         excavation_value = analysis_data.get(kpi_key, {}).get('excavation', {}).get('value', 0)
         logger.info(f"GEOLOGY: ✅ Data processing complete. Excavation: {excavation_value} MT")
 
-        # STEP 2: Generate AI insights using Local LLM
-        logger.info("GEOLOGY: Step 2 - Generating AI insights with Local LLM...")
+        # STEP 2: Generate AI insights
+        # =======================================================================
+        # OPENAI API (ACTIVE)
+        # =======================================================================
+        logger.info("GEOLOGY: Step 2 - Generating AI insights with OpenAI...")
 
-        if not LocalLLMConfig.is_configured():
-            logger.error("GEOLOGY: Local LLM not configured!")
+        openai_api_key = os.getenv("OPENAI_API_KEY", "")
+        openai_model = os.getenv("OPENAI_MODEL", "gpt-4o")  # Latest model from .env
+
+        if not openai_api_key:
+            logger.error("GEOLOGY: OpenAI API key not configured!")
             return jsonify({
                 'success': False,
                 'error': 'CONFIGURATION_ERROR',
-                'message': 'Local LLM is not configured. Check LOCAL_LLM_ENABLED in .env'
+                'message': 'OpenAI API key is not configured. Check OPENAI_API_KEY in .env'
             }), 500
 
         insights_generator = GeologyClaudeInsightsGenerator(
-            api_key=LocalLLMConfig.API_KEY,
-            model=LocalLLMConfig.MODEL,
-            base_url=LocalLLMConfig.BASE_URL
+            api_key=openai_api_key,
+            model=openai_model
         )
         claude_insights_html = insights_generator.generate_insights(analysis_data, date_label)
-        logger.info(f"GEOLOGY: ✅ Local LLM insights generated ({len(claude_insights_html)} chars)")
+        logger.info(f"GEOLOGY: ✅ OpenAI insights generated ({len(claude_insights_html)} chars)")
+
+        # =======================================================================
+        # LOCAL LLM (COMMENTED OUT - UNCOMMENT TO USE INSTEAD OF OPENAI)
+        # =======================================================================
+        # To use Local LLM instead:
+        # 1. Comment out the OpenAI section above
+        # 2. Uncomment the code below
+        # 3. Ensure LOCAL_LLM_ENABLED=true in .env
+        #
+        # logger.info("GEOLOGY: Step 2 - Generating AI insights with Local LLM...")
+        #
+        # if not LocalLLMConfig.is_configured():
+        #     logger.error("GEOLOGY: Local LLM not configured!")
+        #     return jsonify({
+        #         'success': False,
+        #         'error': 'CONFIGURATION_ERROR',
+        #         'message': 'Local LLM is not configured. Check LOCAL_LLM_ENABLED in .env'
+        #     }), 500
+        #
+        # insights_generator = GeologyClaudeInsightsGenerator(
+        #     api_key=LocalLLMConfig.API_KEY,
+        #     model=LocalLLMConfig.MODEL,
+        #     base_url=LocalLLMConfig.BASE_URL
+        # )
+        # claude_insights_html = insights_generator.generate_insights(analysis_data, date_label)
+        # logger.info(f"GEOLOGY: ✅ Local LLM insights generated ({len(claude_insights_html)} chars)")
+
+        # Generate AI Executive Summary
+        ai_summary_html = insights_generator.generate_ai_summary(analysis_data, date_label)
+        logger.info(f"GEOLOGY: ✅ AI summary generated ({len(ai_summary_html)} chars)")
 
         # STEP 3: Generate HTML dashboard
         logger.info("GEOLOGY: Step 3 - Generating dashboard HTML...")
@@ -1237,7 +1296,8 @@ def _generate_geology_dashboard_internal(user, ip_address: str, date_str: str = 
         html_content = template_engine.generate_dashboard(
             analysis_data,
             claude_insights_html,
-            date_label
+            date_label,
+            ai_summary_html=ai_summary_html
         )
         logger.info(f"GEOLOGY: ✅ Dashboard HTML generated ({len(html_content)} chars)")
 
@@ -1915,23 +1975,25 @@ def parse_visualizations(response_text: str) -> tuple[str, list]:
 
 
 # ============================================================================
-# CHATBOT ENDPOINT (Local LLM - OpenAI Compatible)
+# CHATBOT ENDPOINT (OpenAI API - ACTIVE)
 # ============================================================================
-# Migration Note (2025-12-16): Migrated from Claude API to Local LLM
-# The chatbot now uses OpenAI-compatible API format for the local Qwen model
-# Tool calling format is different - OpenAI uses 'functions' instead of 'tools'
+# Migration Note (2026-01-15): Migrated from Local LLM to OpenAI API
+# The chatbot now uses OpenAI API directly (gpt-4o model)
+# Tool calling format uses OpenAI 'functions' format
+# ============================================================================
+# PREVIOUS: Local LLM (Ollama/Qwen) - Commented out for rollback if needed
 
 @app.route('/api/v1/chat', methods=['POST'])
 @smart_auth
 def chat():
     """
-    AI Chatbot powered by Local LLM with MCP database tools.
+    AI Chatbot powered by OpenAI API with MCP database tools.
     Now includes authentication, AI flagging, and activity logging.
 
-    Migration Note: Uses OpenAI-compatible API format for local Qwen 2.5:72B model.
+    Migration Note: Uses OpenAI API (gpt-4o model).
     """
     logger.info("="*70)
-    logger.info("CHAT ENDPOINT CALLED (LOCAL LLM WITH MCP TOOLS)")
+    logger.info("CHAT ENDPOINT CALLED (OPENAI API WITH MCP TOOLS)")
 
 # Get user info from the auth decorator
     # =============================================================
@@ -1952,13 +2014,13 @@ def chat():
     #     }), 503
 
     # ========================================================================
-    # NEW CODE - LOCAL LLM CHECK
+    # OPENAI API CHECK (ACTIVE)
     # ========================================================================
     if not llm_client:
         return jsonify({
             'success': False,
             'error': 'CHATBOT_DISABLED',
-            'message': 'Local LLM is not configured. Ensure SSH tunnel is active.'
+            'message': 'OpenAI API is not configured. Set OPENAI_API_KEY in .env'
         }), 503
 
     try:
@@ -2107,10 +2169,15 @@ def chat():
         # Add current user message
         messages.append({"role": "user", "content": user_message})
 
+        # Get OpenAI config from environment variables
+        chat_model = os.getenv("OPENAI_MODEL", "gpt-4o")
+        chat_max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "4096"))
+        chat_temperature = float(os.getenv("OPENAI_TEMPERATURE", "0.3"))
+
         response = llm_client.chat.completions.create(
-            model=LocalLLMConfig.MODEL,
-            max_tokens=LocalLLMConfig.MAX_TOKENS,
-            temperature=LocalLLMConfig.TEMPERATURE,
+            model=chat_model,
+            max_tokens=chat_max_tokens,
+            temperature=chat_temperature,
             tools=tools,
             messages=messages
         )
@@ -2163,9 +2230,9 @@ def chat():
 
             # Continue conversation
             response = llm_client.chat.completions.create(
-                model=LocalLLMConfig.MODEL,
-                max_tokens=LocalLLMConfig.MAX_TOKENS,
-                temperature=LocalLLMConfig.TEMPERATURE,
+                model=chat_model,
+                max_tokens=chat_max_tokens,
+                temperature=chat_temperature,
                 tools=tools,
                 messages=messages
             )

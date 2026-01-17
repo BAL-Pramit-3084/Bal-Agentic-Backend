@@ -3,14 +3,11 @@ claude_analyzer.py - Geology & Survey Department
 =================================================
 AI-powered insights for Geology & Survey Dashboard.
 
-Supports both Local LLM (Ollama/Qwen) and Anthropic Claude API.
-Configuration from config_modules.config.
+THIS IS AN AGENTIC DASHBOARD - LLM IS MANDATORY, NOT OPTIONAL.
 
-Generates 8 insight cards with proper CSS classes:
-- insight-card danger (red) - critical issues
-- insight-card warning (orange) - concerns
-- insight-card success (green) - positive indicators
-- insight-card (default blue) - neutral observations
+Supports:
+1. OpenAI API (GPT-4o, GPT-4o-mini) - DEFAULT
+2. Local LLM (Ollama/Qwen) - COMMENTED OUT, can be re-enabled
 
 Author: Senior ML Engineer
 Date: January 2026
@@ -19,13 +16,13 @@ Date: January 2026
 import logging
 import re
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from openai import OpenAI
 
 # Import configuration
 try:
     from config_modules.config import LocalLLMConfig, ClaudeConfig
 except ImportError:
-    # Fallback if config_modules not available
     LocalLLMConfig = None
     ClaudeConfig = None
 
@@ -33,360 +30,361 @@ logger = logging.getLogger(__name__)
 
 
 class ClaudeInsightsGenerator:
-    """Generate executive insights from Geology & Survey operations data."""
+    """
+    Generate executive insights from Geology & Survey operations data.
 
-    def __init__(
-        self,
-        api_key: str = None,
-        model: str = None,
-        base_url: str = None
-    ):
+    Supports multiple LLM backends:
+    - OpenAI API (default)
+    - Local LLM via Ollama (commented out)
+    """
+
+    def __init__(self, api_key: str = None, model: str = None, base_url: str = None, **kwargs):
         """
-        Initialize LLM client from config_modules or parameters.
+        Initialize LLM client.
 
         Priority:
-        1. Explicit parameters passed to __init__
-        2. config_modules.config settings
-        3. Environment variables as fallback
+        1. OpenAI API (if OPENAI_API_KEY is set)
+        2. Local LLM (if LOCAL_LLM_ENABLED=true) - currently commented out
         """
-        # Determine if using local LLM
-        if LocalLLMConfig is not None:
-            self.use_local_llm = LocalLLMConfig.ENABLED
-        else:
-            self.use_local_llm = os.getenv("LOCAL_LLM_ENABLED", "false").lower() == "true"
 
-        if self.use_local_llm:
-            # Local LLM configuration (Ollama/Qwen)
-            from openai import OpenAI
+        # =======================================================================
+        # OPENAI API CONFIGURATION (ACTIVE)
+        # =======================================================================
+        self.use_openai = True  # Set to False to use Local LLM instead
 
-            if LocalLLMConfig is not None:
-                self.base_url = base_url or LocalLLMConfig.BASE_URL
-                self.api_key = api_key or LocalLLMConfig.API_KEY
-                self.model = model or LocalLLMConfig.MODEL
-                self.temperature = LocalLLMConfig.TEMPERATURE
-                self.max_tokens = LocalLLMConfig.MAX_TOKENS
-            else:
-                # Fallback to environment variables
-                self.base_url = base_url or os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:11434/v1/")
-                self.api_key = api_key or os.getenv("LOCAL_LLM_API_KEY", "ollama")
-                self.model = model or os.getenv("LOCAL_LLM_MODEL", "qwen2.5:72b-instruct-q4_K_M")
-                self.temperature = float(os.getenv("LOCAL_LLM_TEMPERATURE", "0.7"))
-                self.max_tokens = int(os.getenv("LOCAL_LLM_MAX_TOKENS", "4096"))
+        if self.use_openai:
+            self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
+            self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o")  # Latest model
+            self.temperature = float(os.getenv("OPENAI_TEMPERATURE", "0.3"))
+            self.max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "4096"))
 
-            self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
-            logger.info(f"Geology LLM Generator initialized (Local) - Model: {self.model}, URL: {self.base_url}")
-        else:
-            # Anthropic Claude API
-            import anthropic
+            if not self.api_key:
+                raise ValueError("OPENAI_API_KEY is required for AI insights generation")
 
-            if ClaudeConfig is not None:
-                self.api_key = api_key or ClaudeConfig.CLAUDE_API_KEY
-                self.model = model or ClaudeConfig.CLAUDE_MODEL
-                self.temperature = ClaudeConfig.TEMPERATURE
-                self.max_tokens = ClaudeConfig.MAX_TOKENS
-            else:
-                self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
-                self.model = model or os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
-                self.temperature = float(os.getenv("LLM_TEMPERATURE", "0.3"))
-                self.max_tokens = 4096
+            self.client = OpenAI(api_key=self.api_key)
+            logger.info(f"Geology AI Generator initialized (OpenAI) - Model: {self.model}")
 
-            self.client = anthropic.Anthropic(api_key=self.api_key)
-            logger.info(f"Geology LLM Generator initialized (Anthropic) - Model: {self.model}")
+        # =======================================================================
+        # LOCAL LLM CONFIGURATION (COMMENTED OUT - UNCOMMENT TO USE)
+        # =======================================================================
+        # To use Local LLM instead of OpenAI:
+        # 1. Set self.use_openai = False above
+        # 2. Uncomment the code below
+        # 3. Ensure LOCAL_LLM_ENABLED=true in .env
+        #
+        # else:
+        #     import httpx
+        #
+        #     # Determine if using local LLM
+        #     if LocalLLMConfig is not None:
+        #         self.use_local_llm = LocalLLMConfig.ENABLED
+        #     else:
+        #         self.use_local_llm = os.getenv("LOCAL_LLM_ENABLED", "false").lower() == "true"
+        #
+        #     if LocalLLMConfig is not None:
+        #         self.base_url = base_url or LocalLLMConfig.BASE_URL
+        #         self.api_key = api_key or LocalLLMConfig.API_KEY
+        #         self.model = model or LocalLLMConfig.MODEL
+        #         self.temperature = LocalLLMConfig.TEMPERATURE
+        #         self.max_tokens = LocalLLMConfig.MAX_TOKENS
+        #     else:
+        #         self.base_url = base_url or os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:11434/v1/")
+        #         self.api_key = api_key or os.getenv("LOCAL_LLM_API_KEY", "ollama")
+        #         self.model = model or os.getenv("LOCAL_LLM_MODEL", "qwen2.5:72b-instruct-q4_K_M")
+        #         self.temperature = float(os.getenv("LOCAL_LLM_TEMPERATURE", "0.7"))
+        #         self.max_tokens = int(os.getenv("LOCAL_LLM_MAX_TOKENS", "4096"))
+        #
+        #     # Set longer timeout for large models (72B needs more time)
+        #     self.client = OpenAI(
+        #         api_key=self.api_key,
+        #         base_url=self.base_url,
+        #         timeout=httpx.Timeout(300.0, connect=30.0)  # 5 min read, 30s connect
+        #     )
+        #     logger.info(f"Geology AI Generator initialized (Local LLM) - Model: {self.model}, URL: {self.base_url}")
 
-    def generate_insights(self, analysis_data: Dict[str, Any], date: str) -> str:
+    def _call_llm(self, prompt: str, max_retries: int = 3) -> str:
         """
-        Generate insights HTML from analysis data.
-        Returns 8 insight cards for the Critical Insights section.
+        Call LLM API with retry logic.
+        Works with both OpenAI API and Local LLM (Ollama).
         """
-        logger.info(f"Generating Geology Survey insights for: {date}")
+        import time
 
-        prompt = self._build_prompt(analysis_data, date)
+        last_error = None
 
-        try:
-            if self.use_local_llm:
-                # OpenAI-compatible API call (Ollama)
+        for attempt in range(max_retries):
+            try:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     max_tokens=self.max_tokens,
                     temperature=self.temperature,
                     messages=[{"role": "user", "content": prompt}]
                 )
-                insights_html = response.choices[0].message.content
-            else:
-                # Anthropic API call
-                response = self.client.messages.create(
-                    model=self.model,
-                    max_tokens=self.max_tokens,
-                    temperature=self.temperature,
-                    messages=[{"role": "user", "content": prompt}]
-                )
-                insights_html = response.content[0].text
+                return response.choices[0].message.content
 
-            insights_html = self._strip_markdown_code_blocks(insights_html)
+            except Exception as e:
+                last_error = e
+                error_type = type(e).__name__
+                logger.warning(f"LLM API attempt {attempt + 1}/{max_retries} failed: {error_type}: {e}")
 
-            # Validate the output contains insight-card divs
-            if 'insight-card' not in insights_html:
-                logger.warning("LLM output missing insight-card structure, using fallback")
-                return self._generate_fallback_insights(analysis_data, date)
+                if attempt < max_retries - 1:
+                    wait_time = 2 * (2 ** attempt)  # 2s, 4s, 8s
+                    logger.info(f"Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
 
-            logger.info(f"LLM insights generated: {len(insights_html)} chars")
-            return insights_html
+        logger.error(f"LLM API failed after {max_retries} attempts: {last_error}")
+        raise last_error
 
-        except Exception as e:
-            logger.error(f"LLM API error: {e}", exc_info=True)
-            return self._generate_fallback_insights(analysis_data, date)
-
-    def _strip_markdown_code_blocks(self, text: str) -> str:
+    def _strip_markdown(self, text: str) -> str:
         """Remove markdown code blocks from LLM response."""
         if not text:
             return text
-
         text = re.sub(r'^```html\s*\n?', '', text.strip())
         text = re.sub(r'^```\s*\n?', '', text.strip())
         text = re.sub(r'\n?```\s*$', '', text.strip())
         text = re.sub(r'```html\s*\n?', '', text)
         text = re.sub(r'\n?```', '', text)
-
         return text.strip()
 
-    def _build_prompt(self, data: Dict[str, Any], date: str) -> str:
-        """Build prompt for LLM with exact HTML structure required.
+    def _build_data_context(self, data: Dict[str, Any], date: str) -> str:
+        """Build structured data context for LLM analysis."""
+        is_range = 'period_kpis' in data
 
-        NEW: Now supports BOTH single date (today_kpis) and date range (period_kpis) data.
-        """
-
-        # Detect if this is range data or single date data
-        is_range_data = 'period_kpis' in data
-
-        # Extract key metrics - UNIFIED approach for both formats
+        # Gap Analysis
         gap = data.get('gap_analysis', {})
-        quality_stats = data.get('mtd_quality_stats') or data.get('quality_stats', {})
-        shift_data = data.get('shift_breakdown', {})
-        location_data = data.get('location_breakdown', {})
+        total_planned = gap.get('total_planned', 0)
+        total_actual = gap.get('total_actual', 0)
+        achievement_pct = gap.get('achievement_pct', 0)
+        remaining_target = gap.get('remaining_target', 0)
+        days_remaining = gap.get('days_remaining', 0)
+        required_daily = gap.get('required_daily_production', 0)
+        avg_daily = gap.get('avg_daily_production', 0)
+        increase_needed = gap.get('increase_needed_pct', 0)
+
+        # Quality Stats
+        quality = data.get('mtd_quality_stats') or data.get('quality_stats', {})
+        avg_cr2o3 = quality.get('avg_cr2o3', 0)
+        min_cr2o3 = quality.get('min_cr2o3', 0)
+        max_cr2o3 = quality.get('max_cr2o3', 0)
+        avg_ratio = quality.get('avg_ratio', 0)
+        total_samples = quality.get('total_samples', 0)
+
+        # Shift Performance
+        shift_data = data.get('shift_plan_vs_actual', {})
+        shift_rows = shift_data.get('rows', [])
+        if not shift_rows:
+            shift_rows = data.get('shift_breakdown', {}).get('rows', [])
+
+        shift_text = ""
+        for r in shift_rows:
+            shift = r.get('shift', '?')
+            planned = r.get('planned', 0)
+            actual = r.get('actual', r.get('qty', 0))
+            pct = r.get('achievement_pct', r.get('pct', 0))
+            shift_text += f"  - Shift {shift}: Actual={actual} MT"
+            if planned > 0:
+                shift_text += f", Planned={planned} MT, Achievement={pct:.1f}%"
+            shift_text += "\n"
+
+        # Location Performance
+        loc_data = data.get('location_breakdown', {}).get('rows', [])
+        if not loc_data:
+            loc_data = data.get('location_performance', {}).get('rows', [])
+            if not loc_data:
+                loc_data = data.get('mtd_location_performance', {}).get('rows', [])
+
+        loc_text = ""
+        for r in loc_data[:5]:
+            loc_text += f"  - {r.get('location', 'Unknown')}: {r.get('qty', 0):,.0f} MT ({r.get('pct', 0):.1f}%)\n"
+
+        # Agency Performance
         agency_data = data.get('agency_performance', {})
-
-        if is_range_data:
-            # DATE RANGE MODE: Use period_kpis
-            period_kpis = data.get('period_kpis', {})
-
-            period_qty = period_kpis.get('excavation', {}).get('value', 0)
-            period_trips = period_kpis.get('trips', {}).get('value', 0)
-            period_avg_load = period_kpis.get('avg_load', {}).get('value', 0)
-            working_days = period_kpis.get('working_days', {}).get('value', 1) or 1
-            avg_daily = period_kpis.get('avg_daily_production', {}).get('value', 0)
-
-            avg_cr2o3 = period_kpis.get('avg_cr2o3', {}).get('value', 0)
-            avg_ratio = period_kpis.get('avg_ratio', {}).get('value', 0)
-            total_samples = period_kpis.get('samples_total', 0)
-
-            # For range, use totals
-            achievement_pct = 100  # Not applicable for range
-            time_elapsed_pct = 0   # Not applicable for range
-            total_planned = 0      # Not applicable for range
-            total_actual = period_qty
-            remaining = 0
-            days_remaining = 0
-            required_daily = 0
-            increase_pct = 0
-
-            max_cr2o3 = quality_stats.get('max_cr2o3', avg_cr2o3)
-            samples_per_day = total_samples / working_days if working_days > 0 else 0
-
-            # Get top agency info (from rows, not mtd)
+        if is_range:
             agency_rows = agency_data.get('rows', [])
-            top_agency_pct = agency_rows[0].get('pct', 0) if agency_rows else 0
-            top_agency_name = agency_rows[0].get('agency', 'Unknown') if agency_rows else 'Unknown'
-
         else:
-            # SINGLE DATE MODE: Use today_kpis and mtd_kpis
-            mtd_kpis = data.get('mtd_kpis', {})
-            today_kpis = data.get('today_kpis', {})
+            agency_rows = agency_data.get('mtd', {}).get('rows', [])
 
-            achievement_pct = gap.get('achievement_pct', 0)
-            time_elapsed_pct = data.get('time_elapsed_pct', 0)
-            total_planned = gap.get('total_planned', 0)
-            total_actual = gap.get('total_actual', mtd_kpis.get('total_excavation', {}).get('value', 0))
-            remaining = gap.get('remaining_target', 0)
-            days_remaining = gap.get('days_remaining', 0)
-            required_daily = gap.get('required_daily_production', 0)
-            avg_daily = mtd_kpis.get('avg_daily_production', {}).get('value', 0)
-            increase_pct = gap.get('increase_needed_pct', 0)
+        agency_text = ""
+        for r in agency_rows[:3]:
+            agency_text += f"  - {r.get('agency', 'Unknown')}: {r.get('qty', 0):,.0f} MT ({r.get('pct', 0):.1f}%)\n"
 
-            period_qty = today_kpis.get('excavation', {}).get('value', 0)
-            period_trips = today_kpis.get('trips', {}).get('value', 0)
-            period_avg_load = today_kpis.get('avg_load', {}).get('value', 0)
+        # Zero Progress Locations
+        plan_rows = data.get('plan_vs_actual', {}).get('rows', [])
+        zero_locs = [r for r in plan_rows if r.get('planned', 0) > 0 and r.get('actual', 0) == 0]
+        zero_text = ""
+        if zero_locs:
+            for r in zero_locs[:5]:
+                zero_text += f"  - {r.get('location', 'Unknown')}: {r.get('planned', 0):,.0f} MT planned, 0 actual\n"
 
-            avg_cr2o3 = quality_stats.get('avg_cr2o3', 0)
-            max_cr2o3 = quality_stats.get('max_cr2o3', 0)
-            total_samples = quality_stats.get('total_samples', 0)
-            working_days = mtd_kpis.get('working_days', {}).get('value', 1) or 1
-            samples_per_day = total_samples / working_days if working_days > 0 else 0
-
-            # Get top agency info
-            mtd_agency_rows = agency_data.get('mtd', {}).get('rows', [])
-            top_agency_pct = mtd_agency_rows[0].get('pct', 0) if mtd_agency_rows else 0
-            top_agency_name = mtd_agency_rows[0].get('agency', 'Unknown') if mtd_agency_rows else 'Unknown'
-
-        # Build prompt (unified for both modes)
-        period_label = "Period" if is_range_data else "Today"
-        prompt = f"""You are a mining operations analyst. Generate EXACTLY 8 insight cards for a Geology & Survey dashboard for {date}.
-
-**KEY METRICS:**
-- MTD Achievement: {achievement_pct:.1f}% ({total_actual:,.0f} MT of {total_planned:,.0f} MT)
-- Time Elapsed: {time_elapsed_pct:.1f}% of month
-- {period_label} Production: {period_qty:,.0f} MT from {period_trips} trips
-- Average Load/Trip: {period_avg_load:.1f} MT (standard: 15 MT)
-- Average Cr₂O₃: {avg_cr2o3:.1f}% (HG≥52%, MG 40-52%, LG<40%)
-- Max Cr₂O₃: {max_cr2o3:.1f}%
-- Samples: {total_samples} total ({samples_per_day:.1f}/day)
-- Top Agency: {top_agency_name} ({top_agency_pct:.1f}%)
-- Required Daily: {required_daily:,.0f} MT/day ({increase_pct:.0f}% increase needed)
-
-**OUTPUT EXACTLY THIS HTML STRUCTURE (8 cards):**
-
-<div class="insight-card [CLASS]"><div class="insight-title">[ICON] [SHORT TITLE]</div><div class="insight-text">[2-3 sentence insight with specific numbers]</div></div>
-
-**CLASS OPTIONS:**
-- "danger" = red background (critical: achievement <50%, zero progress, quality <40%)
-- "warning" = orange background (concern: achievement <80%, efficiency gap, dependency)
-- "success" = green background (positive: good quality, on track)
-- "" = blue background (neutral observation)
-
-**GENERATE THESE 8 INSIGHTS IN ORDER:**
-
-1. PLAN ACHIEVEMENT (danger if <50%, warning if <80%, else success)
-   Icon: ⚠️ or ✅ | Title: "Significant Plan Shortfall" or "Production On Track"
-
-2. SHIFT PERFORMANCE (analyze today's shift contribution)
-   Icon: 📉 or 📈 | Title: "Shift [X] Underperformance" or "Balanced Shift Output"
-
-3. QUALITY TREND (based on avg Cr₂O₃)
-   Icon: ✅ or ⚠️ | Title: "Excellent Quality" or "Quality Concerns"
-
-4. LOCATION PATTERN (which locations dominating)
-   Icon: 🔄 | Title: "Location Shift Pattern"
-
-5. ZERO PROGRESS ALERT (if any planned locations have 0)
-   Icon: 🚫 | Title: "DVS West & East - Zero Progress" (danger class)
-
-6. LOAD EFFICIENCY (compare to 15 MT standard)
-   Icon: 📊 | Title: "Declining Load Efficiency" or "Good Load Efficiency"
-
-7. AGENCY DEPENDENCY (warning if single agency >75%)
-   Icon: 🏆 | Title: "[Agency] Dominance" or "Balanced Agency Distribution"
-
-8. SAMPLE COVERAGE (warning if <2/day)
-   Icon: 🔬 | Title: "Sample Coverage Gap" or "Adequate Sample Coverage"
-
-**RULES:**
-- Output ONLY the 8 <div> elements, nothing else
-- Use actual numbers from metrics above
-- Each insight-text should be 2-3 sentences with specific data
-- NO markdown, NO code blocks, NO explanations before/after
-- Use proper HTML entities for special chars
-
-**OUTPUT NOW:**"""
-
-        return prompt
-
-    def _generate_fallback_insights(self, data: Dict[str, Any], date: str) -> str:
-        """Generate fallback insights when LLM fails.
-
-        NEW: Now supports BOTH single date and date range data.
-        """
-        logger.warning("Generating fallback insights")
-
-        # Detect if this is range data or single date data
-        is_range_data = 'period_kpis' in data
-
-        gap = data.get('gap_analysis', {})
-        quality_stats = data.get('mtd_quality_stats') or data.get('quality_stats', {})
-        agency_data = data.get('agency_performance', {})
-
-        if is_range_data:
-            # DATE RANGE MODE
-            period_kpis = data.get('period_kpis', {})
-
-            achievement_pct = 0  # Not applicable
-            time_elapsed_pct = 0  # Not applicable
-            total_planned = 0
-            total_actual = period_kpis.get('excavation', {}).get('value', 0)
-            remaining = 0
-            days_remaining = 0
-            expected_achievement = 0
-
-            td_qty = period_kpis.get('excavation', {}).get('value', 0)
-            td_trips = period_kpis.get('trips', {}).get('value', 0)
-            td_avg_load = period_kpis.get('avg_load', {}).get('value', 0)
-            working_days = period_kpis.get('working_days', {}).get('value', 1) or 1
-
-            avg_cr2o3 = period_kpis.get('avg_cr2o3', {}).get('value', 0)
-            avg_ratio = period_kpis.get('avg_ratio', {}).get('value', 0)
-            total_samples = period_kpis.get('samples_total', 0)
-            max_cr2o3 = quality_stats.get('max_cr2o3', avg_cr2o3)
-
-            # Get top agency info
-            agency_rows = agency_data.get('rows', [])
-            top_agency_pct = agency_rows[0].get('pct', 0) if agency_rows else 0
-            top_agency_name = agency_rows[0].get('agency', 'BAL') if agency_rows else 'BAL'
-            top_agency_qty = agency_rows[0].get('qty', 0) if agency_rows else 0
-
+        # KPIs
+        if is_range:
+            kpis = data.get('period_kpis', {})
+            working_days = kpis.get('working_days', {}).get('value', 0)
+            total_trips = kpis.get('trips', {}).get('value', 0)
+            avg_load = kpis.get('avg_load', {}).get('value', 0)
         else:
-            # SINGLE DATE MODE
+            kpis = data.get('today_kpis', {})
             mtd_kpis = data.get('mtd_kpis', {})
-            today_kpis = data.get('today_kpis', {})
+            working_days = mtd_kpis.get('working_days', {}).get('value', 0)
+            total_trips = kpis.get('trips', {}).get('value', 0)
+            avg_load = kpis.get('avg_load', {}).get('value', 0)
 
-            achievement_pct = gap.get('achievement_pct', 0)
-            time_elapsed_pct = data.get('time_elapsed_pct', 0)
-            total_planned = gap.get('total_planned', 0)
-            total_actual = gap.get('total_actual', mtd_kpis.get('total_excavation', {}).get('value', 0))
-            remaining = gap.get('remaining_target', 0)
-            days_remaining = gap.get('days_remaining', 0)
-            expected_achievement = gap.get('expected_achievement_pct', 0)
+        time_elapsed = data.get('time_elapsed_pct', 0)
 
-            td_qty = today_kpis.get('excavation', {}).get('value', 0)
-            td_trips = today_kpis.get('trips', {}).get('value', 0)
-            td_avg_load = today_kpis.get('avg_load', {}).get('value', 0)
-            working_days = mtd_kpis.get('working_days', {}).get('value', 1) or 1
+        context = f"""=== GEOLOGY & SURVEY OPERATIONS DATA FOR {date} ===
 
-            avg_cr2o3 = quality_stats.get('avg_cr2o3', 0)
-            avg_ratio = quality_stats.get('avg_ratio', 0)
-            total_samples = quality_stats.get('total_samples', 0)
-            max_cr2o3 = quality_stats.get('max_cr2o3', 0)
+PRODUCTION METRICS:
+- Total Planned (Monthly): {total_planned:,.0f} MT
+- Total Actual: {total_actual:,.0f} MT
+- Achievement: {achievement_pct:.1f}%
+- Remaining to Target: {remaining_target:,.0f} MT
+- Time Elapsed: {time_elapsed:.1f}% of month
+- Days Remaining: {days_remaining}
+- Average Daily Production: {avg_daily:,.0f} MT/day
+- Required Daily to Hit Target: {required_daily:,.0f} MT/day
+- Productivity Increase Needed: {increase_needed:.1f}%
 
-            # Get top agency info
-            mtd_agency_rows = agency_data.get('mtd', {}).get('rows', [])
-            top_agency_pct = mtd_agency_rows[0].get('pct', 0) if mtd_agency_rows else 0
-            top_agency_name = mtd_agency_rows[0].get('agency', 'BAL') if mtd_agency_rows else 'BAL'
-            top_agency_qty = mtd_agency_rows[0].get('qty', 0) if mtd_agency_rows else 0
+QUALITY METRICS:
+- Average Cr2O3: {avg_cr2o3:.1f}% (HG>=52%, MG 40-52%, LG<40%)
+- Range: {min_cr2o3:.1f}% to {max_cr2o3:.1f}%
+- Cr:Fe Ratio: {avg_ratio:.2f}
+- Total Samples: {total_samples}
+- Samples per Day: {total_samples/working_days if working_days > 0 else 0:.1f}
 
-        # Determine classes
-        plan_class = "danger" if achievement_pct < 50 else "warning" if achievement_pct < 80 else "success"
-        plan_icon = "⚠️" if achievement_pct < 80 else "✅"
-        plan_title = "Significant Plan Shortfall" if achievement_pct < 80 else "Production On Track"
+OPERATIONAL METRICS:
+- Working Days: {working_days}
+- Total Trips: {total_trips:,}
+- Average Load per Trip: {avg_load:.1f} MT (Standard: 15 MT)
 
-        quality_class = "success" if avg_cr2o3 >= 50 else "warning" if avg_cr2o3 >= 40 else "danger" if avg_cr2o3 > 0 else ""
-        quality_icon = "✅" if avg_cr2o3 >= 50 else "⚠️"
-        quality_title = "Excellent Quality" if avg_cr2o3 >= 52 else "Good Quality Performance" if avg_cr2o3 >= 50 else "Quality Performance" if avg_cr2o3 > 0 else "No Quality Data"
-        quality_grade = "High Grade" if avg_cr2o3 >= 52 else "Medium Grade" if avg_cr2o3 >= 40 else "Low Grade" if avg_cr2o3 > 0 else "N/A"
+SHIFT PERFORMANCE:
+{shift_text if shift_text else "  No shift data available"}
 
-        load_class = "danger" if td_avg_load < 10 and td_avg_load > 0 else "warning" if td_avg_load < 15 and td_avg_load > 0 else "success" if td_avg_load > 0 else ""
-        load_pct_gap = ((15 - td_avg_load) / 15 * 100) if td_avg_load < 15 and td_avg_load > 0 else 0
+LOCATION PERFORMANCE (Top 5):
+{loc_text if loc_text else "  No location data available"}
 
-        agency_class = "warning" if top_agency_pct > 75 else "success" if top_agency_pct > 0 else ""
+AGENCY PERFORMANCE:
+{agency_text if agency_text else "  No agency data available"}
 
-        sample_class = "warning" if samples_per_day < 2 and total_samples > 0 else "success" if total_samples > 0 else ""
+LOCATIONS WITH ZERO PROGRESS (Planned but 0 Actual):
+{zero_text if zero_text else "  None - all planned locations have some production"}
+"""
+        return context
 
-        insights = f'''<div class="insight-card {plan_class}"><div class="insight-title">{plan_icon} {plan_title}</div><div class="insight-text">With {time_elapsed_pct:.1f}% of the month elapsed, {achievement_pct:.1f}% of the monthly target ({total_actual:,.0f} MT of {total_planned:,.0f} MT) has been achieved. Current pace projects ~{expected_achievement:.0f}% achievement by month end.</div></div>
-<div class="insight-card warning"><div class="insight-title">📉 Shift Performance Analysis</div><div class="insight-text">Today recorded {td_qty:,.0f} MT across {td_trips} trips. Review shift-wise contribution and identify underperforming shifts for corrective action.</div></div>
-<div class="insight-card {quality_class}"><div class="insight-title">{quality_icon} {quality_title}</div><div class="insight-text">{"Average Cr₂O₃ at " + f"{avg_cr2o3:.1f}% indicates {quality_grade} ore. Best sample recorded {max_cr2o3:.1f}%." if avg_cr2o3 > 0 else "No sample analysis data available for quality assessment."}</div></div>
-<div class="insight-card warning"><div class="insight-title">🔄 Location Shift Pattern</div><div class="insight-text">Production distribution across locations requires monitoring. Ensure all planned faces are being excavated according to plan.</div></div>
-<div class="insight-card danger"><div class="insight-title">🚫 DVS West & East - Zero Progress</div><div class="insight-text">DVS West and DVS East locations have zero excavation recorded. Immediate mobilization required to recover planned production.</div></div>
-<div class="insight-card {load_class}"><div class="insight-title">📊 {"Declining " if td_avg_load < 15 and td_avg_load > 0 else ""}Load Efficiency</div><div class="insight-text">{"Average load per trip is " + f"{td_avg_load:.1f} MT vs 15 MT standard - {load_pct_gap:.0f}% below optimal." if td_avg_load > 0 else "No trip data available for load analysis."}</div></div>
-<div class="insight-card {agency_class}"><div class="insight-title">🏆 {top_agency_name} Agency {"Dominance" if top_agency_pct > 75 else "Performance"}</div><div class="insight-text">{f"{top_agency_name} contributes {top_agency_pct:.1f}% of excavation (MTD: {top_agency_qty:,.0f} MT)." if top_agency_pct > 0 else "No agency performance data available."}</div></div>
-<div class="insight-card {sample_class}"><div class="insight-title">🔬 Sample Coverage {"Gap" if samples_per_day < 2 and total_samples > 0 else ""}</div><div class="insight-text">{f"{total_samples} samples analyzed MTD (~{samples_per_day:.1f}/day)." if total_samples > 0 else "No samples analyzed MTD. Implement sampling protocol."}</div></div>'''
+    def generate_insights(self, analysis_data: Dict[str, Any], date: str) -> str:
+        """Generate 8 insight cards using LLM."""
+        logger.info(f"Generating AI insights for: {date}")
 
-        return insights
+        data_context = self._build_data_context(analysis_data, date)
+
+        prompt = f"""{data_context}
+
+=== YOUR TASK ===
+
+You are an expert mining operations analyst. Analyze the data above and generate EXACTLY 8 insight cards.
+
+Each insight MUST:
+1. Reference SPECIFIC numbers from the data (not generic statements)
+2. Identify the ROOT CAUSE or pattern
+3. Provide ACTIONABLE recommendations
+4. Be something a mine manager would find valuable
+
+=== OUTPUT FORMAT ===
+
+Output EXACTLY 8 HTML divs in this format:
+<div class="insight-card [CLASS]"><div class="insight-title">[EMOJI] [SHORT TITLE]</div><div class="insight-text">[2-3 sentences with specific numbers and actionable insight]</div></div>
+
+CLASS OPTIONS:
+- "danger" = red (critical: achievement <50%, major gaps, safety issues)
+- "warning" = orange (concern: behind plan, inefficiencies, risks)
+- "success" = green (positive: on track, good quality, improvements)
+- "" = blue (neutral observation or informational)
+
+=== REQUIRED INSIGHTS (generate these 8) ===
+
+1. PLAN ACHIEVEMENT STATUS - Are we on track? By how much are we ahead/behind?
+2. SHIFT PERFORMANCE - Which shift is best/worst? What's the gap?
+3. QUALITY ANALYSIS - What grade are we mining? Is quality consistent?
+4. LOCATION PATTERNS - Where is production concentrated? Any risks?
+5. ZERO PROGRESS ALERT - Any planned locations with zero output?
+6. LOAD EFFICIENCY - Compare actual vs 15 MT standard
+7. AGENCY ANALYSIS - Any over-dependency on contractors?
+8. SAMPLING COVERAGE - Are we sampling enough?
+
+=== RULES ===
+- Output ONLY the 8 <div> elements
+- NO markdown, NO code blocks, NO explanations
+- Use actual numbers from the data
+- Make insights specific and actionable
+
+OUTPUT THE 8 HTML DIVS NOW:"""
+
+        try:
+            response = self._call_llm(prompt)
+            insights_html = self._strip_markdown(response)
+
+            if 'insight-card' not in insights_html:
+                logger.error("LLM response missing insight-card structure")
+                raise ValueError("Invalid LLM response format")
+
+            logger.info(f"AI insights generated successfully: {len(insights_html)} chars")
+            return insights_html
+
+        except Exception as e:
+            logger.error(f"AI insight generation failed: {e}", exc_info=True)
+            raise
+
+    def generate_ai_summary(self, analysis_data: Dict[str, Any], date: str) -> str:
+        """Generate AI executive summary."""
+        logger.info(f"Generating AI summary for: {date}")
+
+        data_context = self._build_data_context(analysis_data, date)
+
+        prompt = f"""{data_context}
+
+=== YOUR TASK ===
+
+You are a senior mining operations analyst presenting to executives. Write a concise executive summary.
+
+Cover:
+1. Overall production status vs target
+2. Key operational highlights (positive and negative)
+3. Quality performance
+4. Top 2-3 immediate action items
+
+=== FORMAT ===
+
+Write 4-5 short paragraphs wrapped in <p> tags with <br> between them.
+Use <strong> tags for key metrics and section headers.
+Be specific with numbers. Be concise. Be actionable.
+
+Example:
+<p><strong>Production Status:</strong> [assessment with numbers]</p><br>
+<p><strong>Operational Performance:</strong> [insights]</p><br>
+<p><strong>Quality Indicators:</strong> [analysis]</p><br>
+<p><strong>Immediate Actions:</strong> [2-3 specific actions]</p>
+
+=== RULES ===
+- Output ONLY the HTML paragraphs
+- NO markdown
+- Use actual numbers
+- Keep it executive-friendly
+- Total: 150-250 words
+
+OUTPUT NOW:"""
+
+        try:
+            response = self._call_llm(prompt)
+            summary_html = self._strip_markdown(response)
+
+            if '<p>' not in summary_html:
+                logger.error("LLM summary response missing paragraph structure")
+                raise ValueError("Invalid LLM response format")
+
+            logger.info(f"AI summary generated successfully: {len(summary_html)} chars")
+            return summary_html
+
+        except Exception as e:
+            logger.error(f"AI summary generation failed: {e}", exc_info=True)
+            raise
 
 
 # Exports

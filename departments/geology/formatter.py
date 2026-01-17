@@ -250,7 +250,10 @@ class GeologySurveyDataProcessor:
             # MTD Summary KPIs
             "mtd_kpis": self._build_mtd_kpis(excavation_mtd, samples_mtd),
 
-            # Shift-wise breakdown (Today)
+            # Shift-wise Plan vs Actual (Today) - Uses daily plan
+            "shift_plan_vs_actual": self._build_shift_plan_vs_actual(daily_plan, excavation_td),
+
+            # Shift-wise breakdown (Today) - For backwards compatibility
             "shift_breakdown": self._build_shift_breakdown(excavation_td, locations),
 
             # Location-wise breakdown (Today)
@@ -273,6 +276,9 @@ class GeologySurveyDataProcessor:
 
             # Monthly Plan vs Actual
             "plan_vs_actual": self._build_plan_vs_actual(monthly_plan, excavation_mtd, locations),
+
+            # Daily Plan vs Actual (Today) - includes grade breakdown
+            "daily_plan_summary": self._build_daily_plan_summary(daily_plan, excavation_td, locations),
 
             # Detailed excavation records (Today)
             "excavation_details": self._build_excavation_details(excavation_td, locations, variants, agencies),
@@ -338,6 +344,9 @@ class GeologySurveyDataProcessor:
         month_year = start_obj.strftime('%Y-%m')
         monthly_plan = self._query_monthly_plan(month_year)
 
+        # Query daily plan for the range (for shift plan vs actual)
+        daily_plan_range = self._query_daily_plan_range(start_date, end_date)
+
         # Build analysis data structure (RANGE version)
         analysis_data = {
             "start_date": start_date,
@@ -356,7 +365,10 @@ class GeologySurveyDataProcessor:
             # PERIOD KPIs (aggregated across entire range)
             "period_kpis": self._build_period_kpis(excavation_range, samples_range),
 
-            # Shift-wise breakdown (aggregated across range)
+            # Shift-wise Plan vs Actual (aggregated across range)
+            "shift_plan_vs_actual": self._build_shift_plan_vs_actual_range(daily_plan_range, excavation_range),
+
+            # Shift-wise breakdown (aggregated across range) - For backwards compatibility
             "shift_breakdown": self._build_shift_breakdown_range(excavation_range, locations),
 
             # Location-wise breakdown (aggregated across range)
@@ -377,8 +389,8 @@ class GeologySurveyDataProcessor:
             # Location performance for range
             "location_performance": self._build_mtd_location_performance(excavation_range, locations),
 
-            # Monthly Plan vs Actual (if applicable)
-            "plan_vs_actual": self._build_plan_vs_actual(monthly_plan, excavation_range, locations),
+            # Plan vs Actual (using DAILY PLAN data for accurate comparison)
+            "plan_vs_actual": self._build_plan_vs_actual_from_daily(daily_plan_range, excavation_range, locations),
 
             # Detailed excavation records (all records in range)
             "excavation_details": self._build_excavation_details(excavation_range, locations, variants, agencies),
@@ -388,6 +400,9 @@ class GeologySurveyDataProcessor:
 
             # Daily breakdown (day-by-day within range)
             "daily_breakdown": self._build_daily_breakdown(excavation_range, samples_range, start_date, end_date),
+
+            # Gap Analysis for range (period-based, not monthly)
+            "gap_analysis": self._build_gap_analysis_range(monthly_plan, excavation_range, days_in_range),
         }
 
         # Check if we have any data
@@ -531,6 +546,29 @@ class GeologySurveyDataProcessor:
             logger.error(f"Error querying daily plan: {e}", exc_info=True)
             return []
 
+    def _query_daily_plan_range(self, start_date: str, end_date: str) -> List[Dict]:
+        """Query mines_daily_excavation_plan for a date range."""
+        query = f"""
+            SELECT
+                Prod_date, Shift, Loc_Id, Face_Desc,
+                OB_QTY_Cum, ORE_QTY, HG_QTY, MG_QTY, LG_QTY,
+                Entry_Id, Entry_Date
+            FROM mines_daily_excavation_plan
+            WHERE Prod_date BETWEEN '{start_date}' AND '{end_date}'
+            ORDER BY Prod_date, Shift, Loc_Id
+        """
+        try:
+            result = self.mcp.query(sql=query, database=self.database)
+            if result["success"]:
+                logger.info(f"Retrieved {len(result['data'])} daily plan records for range")
+                return result["data"]
+            else:
+                logger.error(f"Daily plan range query failed: {result.get('error')}")
+                return []
+        except Exception as e:
+            logger.error(f"Error querying daily plan range: {e}", exc_info=True)
+            return []
+
     # ========================================================================
     # BUILD SECTION METHODS
     # ========================================================================
@@ -602,12 +640,23 @@ class GeologySurveyDataProcessor:
         }
 
     def _build_mtd_kpis(self, excavation_mtd: List[Dict], samples_mtd: List[Dict]) -> Dict[str, Any]:
-        """Build MTD summary KPI cards."""
+        """Build MTD summary KPI cards with material type breakdown.
+
+        Material Types (Variant_Id):
+        - 1 = ORE (HG/MG/LG/LUMP)
+        - 3 = OVERBURDEN (OB)
+        - 4 = SILT
+        """
         # MTD excavation totals
         mtd_qty = sum(safe_float(r.get('Qty')) for r in excavation_mtd)
         mtd_trips = sum(safe_int(r.get('No_Of_trips')) for r in excavation_mtd)
         mtd_working_days = len(set(r.get('Prod_date') for r in excavation_mtd))
         mtd_avg_daily = mtd_qty / mtd_working_days if mtd_working_days > 0 else 0
+
+        # Material type breakdown (Variant: 1=ORE, 3=OB, 4=SILT)
+        ore_qty = sum(safe_float(r.get('Qty')) for r in excavation_mtd if safe_int(r.get('Variant')) == 1)
+        ob_qty = sum(safe_float(r.get('Qty')) for r in excavation_mtd if safe_int(r.get('Variant')) == 3)
+        silt_qty = sum(safe_float(r.get('Qty')) for r in excavation_mtd if safe_int(r.get('Variant')) == 4)
 
         # MTD quality metrics
         mtd_cr2o3_values = [safe_float(r.get('Cr2O3')) for r in samples_mtd if r.get('Cr2O3')]
@@ -618,6 +667,21 @@ class GeologySurveyDataProcessor:
             "total_excavation": {
                 "value": mtd_qty,
                 "formatted": format_number(mtd_qty),
+                "unit": "MT",
+            },
+            "ore_qty": {
+                "value": ore_qty,
+                "formatted": format_number(ore_qty),
+                "unit": "MT",
+            },
+            "ob_qty": {
+                "value": ob_qty,
+                "formatted": format_number(ob_qty),
+                "unit": "MT",
+            },
+            "silt_qty": {
+                "value": silt_qty,
+                "formatted": format_number(silt_qty),
                 "unit": "MT",
             },
             "total_trips": {
@@ -1002,27 +1066,48 @@ class GeologySurveyDataProcessor:
 
     def _build_plan_vs_actual(self, monthly_plan: List[Dict], excavation_mtd: List[Dict],
                                locations: Dict[int, str]) -> Dict[str, Any]:
-        """Build monthly plan vs actual progress table."""
+        """Build monthly plan vs actual progress table.
+
+        IMPORTANT: Since actual excavation data doesn't have grade breakdown,
+        we aggregate planned data by location to match. Each location appears
+        once with total planned tonnage across all grades.
+        """
         # Aggregate actual by location
         actual_by_loc = defaultdict(float)
         for r in excavation_mtd:
             loc_id = safe_int(r.get('Loc_Id'))
             actual_by_loc[loc_id] += safe_float(r.get('Qty'))
 
-        # Build plan rows with actual comparison
-        rows = []
-        total_planned = 0
-        total_actual = 0
+        # Aggregate planned by location (summing all grades for ORE mode)
+        # Structure: {loc_id: {"planned": total, "grades": ["HG", "MG", "LG"]}}
+        planned_by_loc = defaultdict(lambda: {"planned": 0, "grades": []})
 
         for p in monthly_plan:
             loc_id = safe_int(p.get('Loc_Id'))
-            loc_name = locations.get(loc_id, f"Location {loc_id}")
             mode = safe_str(p.get('Mode'))
             grade = safe_str(p.get('Grade'))
             planned = safe_float(p.get('Tonnage'))
 
-            # Only show ORE mode for now
+            # Only include ORE mode
             if mode.upper() != 'ORE':
+                continue
+
+            planned_by_loc[loc_id]["planned"] += planned
+            if grade and grade != 'undefined' and grade not in planned_by_loc[loc_id]["grades"]:
+                planned_by_loc[loc_id]["grades"].append(grade)
+
+        # Build rows - one row per location
+        rows = []
+        total_planned = 0
+        total_actual = 0
+
+        for loc_id, plan_data in sorted(planned_by_loc.items(), key=lambda x: x[1]["planned"], reverse=True):
+            loc_name = locations.get(loc_id, f"Location {loc_id}")
+            planned = plan_data["planned"]
+            grades = plan_data["grades"]
+
+            # Skip locations with no planned tonnage
+            if planned <= 0:
                 continue
 
             actual = actual_by_loc.get(loc_id, 0)
@@ -1040,10 +1125,24 @@ class GeologySurveyDataProcessor:
                 status = "Not Started"
                 status_class = "danger"
 
+            # Format grade display: show all grades or "Mixed" if multiple
+            if len(grades) == 1:
+                grade_display = grades[0]
+                grade_badge_class = get_grade_badge_class(grades[0])
+            elif len(grades) > 1:
+                # Sort grades: HG, MG, LG
+                grade_order = {"HG": 1, "MG": 2, "LG": 3}
+                sorted_grades = sorted(grades, key=lambda g: grade_order.get(g, 99))
+                grade_display = "/".join(sorted_grades)
+                grade_badge_class = "badge-mixed"
+            else:
+                grade_display = "-"
+                grade_badge_class = ""
+
             rows.append({
                 "location": loc_name,
-                "grade": grade if grade != 'undefined' else '-',
-                "grade_badge_class": get_grade_badge_class(grade) if grade in ['HG', 'MG', 'LG'] else '',
+                "grade": grade_display,
+                "grade_badge_class": grade_badge_class,
                 "planned": round(planned),
                 "actual": round(actual),
                 "achievement_pct": round(achievement_pct, 1),
@@ -1053,10 +1152,8 @@ class GeologySurveyDataProcessor:
             })
 
             total_planned += planned
-            # Note: actual is already added at location level, avoid double counting
+            total_actual += actual
 
-        # Recalculate total actual from unique locations
-        total_actual = sum(actual_by_loc.values())
         total_achievement_pct = (total_actual / total_planned * 100) if total_planned > 0 else 0
         total_remaining = max(0, total_planned - total_actual)
 
@@ -1068,6 +1165,184 @@ class GeologySurveyDataProcessor:
                 "achievement_pct": round(total_achievement_pct, 1),
                 "remaining": round(total_remaining),
             },
+        }
+
+    def _build_plan_vs_actual_from_daily(self, daily_plan_range: List[Dict], excavation_range: List[Dict],
+                                          locations: Dict[int, str]) -> Dict[str, Any]:
+        """Build plan vs actual progress table using DAILY PLAN data.
+
+        This aggregates the daily excavation plan (mines_daily_excavation_plan) over
+        the date range and compares with actual excavation (mines_day_wise_excavation).
+
+        The daily plan has: OB_QTY_Cum, ORE_QTY, HG_QTY, MG_QTY, LG_QTY per location per shift per day.
+        We sum OB + ORE across all days/shifts in the range for planned values.
+
+        Actual excavation includes ALL variants (ORE, OVERBURDEN, SILT, etc.) to match other KPIs.
+        Variant codes: 1=ORE, 2=ROM, 3=OVERBURDEN, 4=SILT, 5=SLURY
+        """
+        # Aggregate actual by location - ALL variants
+        actual_by_loc = defaultdict(float)
+        for r in excavation_range:
+            loc_id = safe_int(r.get('Loc_Id'))
+            actual_by_loc[loc_id] += safe_float(r.get('Qty'))
+
+        # Aggregate planned by location from daily plan
+        # Structure: {loc_id: {"ob": total, "ore": total, "total": ob+ore, "hg": total, "mg": total, "lg": total}}
+        planned_by_loc = defaultdict(lambda: {"ob": 0, "ore": 0, "total": 0, "hg": 0, "mg": 0, "lg": 0})
+
+        for p in daily_plan_range:
+            loc_id = safe_int(p.get('Loc_Id'))
+            ob = safe_float(p.get('OB_QTY_Cum'))
+            ore = safe_float(p.get('ORE_QTY'))
+            planned_by_loc[loc_id]["ob"] += ob
+            planned_by_loc[loc_id]["ore"] += ore
+            planned_by_loc[loc_id]["total"] += ob + ore
+            planned_by_loc[loc_id]["hg"] += safe_float(p.get('HG_QTY'))
+            planned_by_loc[loc_id]["mg"] += safe_float(p.get('MG_QTY'))
+            planned_by_loc[loc_id]["lg"] += safe_float(p.get('LG_QTY'))
+
+        # Build rows - one row per location with planned total (OB + ORE) > 0
+        rows = []
+        total_planned = 0
+        total_actual = 0
+
+        for loc_id, plan_data in sorted(planned_by_loc.items(), key=lambda x: x[1]["total"], reverse=True):
+            loc_name = locations.get(loc_id, f"Location {loc_id}")
+            planned = plan_data["total"]
+
+            # Skip locations with no planned total
+            if planned <= 0:
+                continue
+
+            actual = actual_by_loc.get(loc_id, 0)
+            achievement_pct = (actual / planned * 100) if planned > 0 else 0
+            remaining = max(0, planned - actual)
+
+            # Status determination
+            if achievement_pct >= 80:
+                status = "On Track"
+                status_class = "success"
+            elif achievement_pct > 0:
+                status = "Behind Plan"
+                status_class = "warning"
+            else:
+                status = "Not Started"
+                status_class = "danger"
+
+            # Determine grade based on what was planned
+            grades = []
+            if plan_data["hg"] > 0:
+                grades.append("HG")
+            if plan_data["mg"] > 0:
+                grades.append("MG")
+            if plan_data["lg"] > 0:
+                grades.append("LG")
+
+            # Format grade display
+            if len(grades) == 1:
+                grade_display = grades[0]
+                grade_badge_class = get_grade_badge_class(grades[0])
+            elif len(grades) > 1:
+                grade_display = "/".join(grades)
+                grade_badge_class = "badge-mixed"
+            else:
+                grade_display = "-"
+                grade_badge_class = ""
+
+            rows.append({
+                "location": loc_name,
+                "grade": grade_display,
+                "grade_badge_class": grade_badge_class,
+                "planned": round(planned),
+                "actual": round(actual),
+                "achievement_pct": round(achievement_pct, 1),
+                "remaining": round(remaining),
+                "status": status,
+                "status_class": status_class,
+            })
+
+            total_planned += planned
+            total_actual += actual
+
+        total_achievement_pct = (total_actual / total_planned * 100) if total_planned > 0 else 0
+        total_remaining = max(0, total_planned - total_actual)
+
+        return {
+            "rows": rows,
+            "totals": {
+                "planned": round(total_planned),
+                "actual": round(total_actual),
+                "achievement_pct": round(total_achievement_pct, 1),
+                "remaining": round(total_remaining),
+            },
+        }
+
+    def _build_daily_plan_summary(self, daily_plan: List[Dict], excavation_td: List[Dict],
+                                   locations: Dict[int, str]) -> Dict[str, Any]:
+        """Build daily plan vs actual comparison with grade breakdown.
+
+        Handles string quantities like '146cum', '292 cum' via safe_float().
+        """
+        # Aggregate planned by location (sum across all shifts for the day)
+        planned_by_loc = defaultdict(lambda: {
+            "ob_qty": 0, "ore_qty": 0, "hg_qty": 0, "mg_qty": 0, "lg_qty": 0
+        })
+
+        for p in daily_plan:
+            loc_id = safe_int(p.get('Loc_Id'))
+            # OB_QTY_Cum is varchar - may contain "146cum", "292 cum", etc.
+            planned_by_loc[loc_id]["ob_qty"] += safe_float(p.get('OB_QTY_Cum'))
+            planned_by_loc[loc_id]["ore_qty"] += safe_float(p.get('ORE_QTY'))
+            planned_by_loc[loc_id]["hg_qty"] += safe_float(p.get('HG_QTY'))
+            planned_by_loc[loc_id]["mg_qty"] += safe_float(p.get('MG_QTY'))
+            planned_by_loc[loc_id]["lg_qty"] += safe_float(p.get('LG_QTY'))
+
+        # Aggregate actual by location from today's excavation
+        actual_by_loc = defaultdict(float)
+        for r in excavation_td:
+            loc_id = safe_int(r.get('Loc_Id'))
+            actual_by_loc[loc_id] += safe_float(r.get('Qty'))
+
+        # Build rows
+        rows = []
+        total_ore_planned = 0
+        total_actual = 0
+
+        for loc_id, planned in planned_by_loc.items():
+            loc_name = locations.get(loc_id, f"Location {loc_id}")
+            actual = actual_by_loc.get(loc_id, 0)
+            ore_planned = planned["ore_qty"]
+            achievement_pct = (actual / ore_planned * 100) if ore_planned > 0 else 0
+
+            rows.append({
+                "location": loc_name,
+                "ob_planned": round(planned["ob_qty"]),
+                "ore_planned": round(ore_planned),
+                "hg_planned": round(planned["hg_qty"]),
+                "mg_planned": round(planned["mg_qty"]),
+                "lg_planned": round(planned["lg_qty"]),
+                "actual": round(actual),
+                "achievement_pct": round(achievement_pct, 1),
+                "variance": round(actual - ore_planned),
+            })
+
+            total_ore_planned += ore_planned
+            total_actual += actual
+
+        # Sort by actual descending
+        rows.sort(key=lambda x: x['actual'], reverse=True)
+
+        total_achievement = (total_actual / total_ore_planned * 100) if total_ore_planned > 0 else 0
+
+        return {
+            "rows": rows,
+            "has_data": len(rows) > 0,
+            "totals": {
+                "ore_planned": round(total_ore_planned),
+                "actual": round(total_actual),
+                "achievement_pct": round(total_achievement, 1),
+                "variance": round(total_actual - total_ore_planned),
+            }
         }
 
     def _build_excavation_details(self, excavation_td: List[Dict], locations: Dict[int, str],
@@ -1172,6 +1447,60 @@ class GeologySurveyDataProcessor:
             "expected_achievement_pct": round(expected_achievement_pct, 1),
         }
 
+    def _build_gap_analysis_range(self, monthly_plan: List[Dict], excavation_range: List[Dict],
+                                   days_in_range: int) -> Dict[str, Any]:
+        """Build gap analysis metrics for date range mode.
+
+        For date ranges, we compare actual production against monthly plan targets.
+        """
+        # Total planned ORE from monthly plan
+        total_planned = sum(safe_float(p.get('Tonnage')) for p in monthly_plan
+                           if safe_str(p.get('Mode')).upper() == 'ORE')
+
+        # Total actual in range
+        total_actual = sum(safe_float(r.get('Qty')) for r in excavation_range)
+
+        # Working days from data
+        working_days = len(set(r.get('Prod_date') for r in excavation_range if r.get('Prod_date')))
+        avg_daily = total_actual / working_days if working_days > 0 else 0
+
+        # Achievement against monthly plan
+        achievement_pct = (total_actual / total_planned * 100) if total_planned > 0 else 0
+
+        # Remaining to achieve monthly target
+        remaining_target = max(0, total_planned - total_actual)
+
+        # Estimate days remaining in month (approximate)
+        days_in_month = 30  # Approximate
+        days_remaining = max(0, days_in_month - working_days)
+
+        # Required daily to complete monthly target
+        required_daily = remaining_target / days_remaining if days_remaining > 0 else 0
+
+        # Increase needed percentage
+        increase_needed_pct = ((required_daily - avg_daily) / avg_daily * 100) if avg_daily > 0 else 0
+
+        # Expected month-end at current pace
+        expected_month_end = avg_daily * days_in_month
+        expected_achievement_pct = (expected_month_end / total_planned * 100) if total_planned > 0 else 0
+
+        return {
+            "total_planned": round(total_planned),
+            "total_actual": round(total_actual),
+            "achievement_pct": round(achievement_pct, 1),
+            "remaining_target": round(remaining_target),
+            "days_elapsed": working_days,
+            "days_remaining": days_remaining,
+            "days_in_range": days_in_range,
+            "working_days": working_days,
+            "avg_daily_production": round(avg_daily),
+            "required_daily_production": round(required_daily),
+            "increase_needed_pct": round(increase_needed_pct, 1),
+            "expected_month_end": round(expected_month_end),
+            "expected_achievement_pct": round(expected_achievement_pct, 1),
+            "is_range_mode": True,
+        }
+
     def _check_has_data(self, analysis_data: Dict) -> bool:
         """Check if we have meaningful data."""
         td_qty = analysis_data.get('today_kpis', {}).get('excavation', {}).get('value', 0)
@@ -1183,11 +1512,22 @@ class GeologySurveyDataProcessor:
     # ========================================================================
 
     def _build_period_kpis(self, excavation_range: List[Dict], samples_range: List[Dict]) -> Dict[str, Any]:
-        """Build PERIOD KPIs (aggregated across entire date range)."""
+        """Build PERIOD KPIs (aggregated across entire date range).
+
+        Material Types (Variant_Id):
+        - 1 = ORE (HG/MG/LG/LUMP)
+        - 3 = OVERBURDEN (OB)
+        - 4 = SILT
+        """
         # Excavation totals
         total_qty = sum(safe_float(r.get('Qty')) for r in excavation_range)
         total_trips = sum(safe_int(r.get('No_Of_trips')) for r in excavation_range)
         total_avg_load = total_qty / total_trips if total_trips > 0 else 0
+
+        # Material type breakdown (Variant: 1=ORE, 3=OB, 4=SILT)
+        ore_qty = sum(safe_float(r.get('Qty')) for r in excavation_range if safe_int(r.get('Variant')) == 1)
+        ob_qty = sum(safe_float(r.get('Qty')) for r in excavation_range if safe_int(r.get('Variant')) == 3)
+        silt_qty = sum(safe_float(r.get('Qty')) for r in excavation_range if safe_int(r.get('Variant')) == 4)
 
         # Working days (unique dates in data)
         working_days = len(set(r.get('Prod_date') for r in excavation_range if r.get('Prod_date')))
@@ -1212,6 +1552,21 @@ class GeologySurveyDataProcessor:
             "excavation": {
                 "value": total_qty,
                 "formatted": format_number(total_qty),
+                "unit": "MT",
+            },
+            "ore_qty": {
+                "value": ore_qty,
+                "formatted": format_number(ore_qty),
+                "unit": "MT",
+            },
+            "ob_qty": {
+                "value": ob_qty,
+                "formatted": format_number(ob_qty),
+                "unit": "MT",
+            },
+            "silt_qty": {
+                "value": silt_qty,
+                "formatted": format_number(silt_qty),
                 "unit": "MT",
             },
             "trips": {
@@ -1249,7 +1604,10 @@ class GeologySurveyDataProcessor:
                 "formatted": str(active_locations),
             },
             "grade_classification": grade_class,
-            "samples_total": len(samples_range),
+            "samples_total": {
+                "value": len(samples_range),
+                "formatted": str(len(samples_range)),
+            },
         }
 
     def _build_shift_breakdown_range(self, excavation_range: List[Dict], locations: Dict[int, str]) -> Dict[str, Any]:
@@ -1494,6 +1852,153 @@ class GeologySurveyDataProcessor:
             current += timedelta(days=1)
 
         return breakdown
+
+    def _build_shift_plan_vs_actual(self, daily_plan: List[Dict], excavation_td: List[Dict]) -> Dict[str, Any]:
+        """Build shift-wise Plan vs Actual comparison.
+
+        Uses mines_daily_excavation_plan (planned) and mines_day_wise_excavation (actual).
+        The daily plan has OB_QTY_Cum, ORE_QTY, HG_QTY, MG_QTY, LG_QTY per shift.
+        We sum ORE_QTY + OB_QTY_Cum for total planned per shift.
+        Actual comes from mines_day_wise_excavation Qty field.
+        """
+        # Aggregate planned by shift
+        planned_by_shift = defaultdict(lambda: {"ob": 0, "ore": 0, "total": 0})
+        for p in daily_plan:
+            shift = safe_str(p.get('Shift', 'Unknown')).upper()
+            if shift in ['A', 'B', 'C']:
+                ob = safe_float(p.get('OB_QTY_Cum'))  # Handles "146cum" format
+                ore = safe_float(p.get('ORE_QTY'))
+                planned_by_shift[shift]["ob"] += ob
+                planned_by_shift[shift]["ore"] += ore
+                planned_by_shift[shift]["total"] += ob + ore
+
+        # Aggregate actual by shift
+        actual_by_shift = defaultdict(float)
+        for r in excavation_td:
+            shift = safe_str(r.get('Shift', 'Unknown')).upper()
+            if shift in ['A', 'B', 'C']:
+                actual_by_shift[shift] += safe_float(r.get('Qty'))
+
+        # Build rows
+        rows = []
+        total_planned = 0
+        total_actual = 0
+
+        for shift in ['A', 'B', 'C']:
+            planned = round(planned_by_shift[shift]["total"])
+            actual = round(actual_by_shift.get(shift, 0))
+            variance = actual - planned
+            achievement_pct = (actual / planned * 100) if planned > 0 else 0
+
+            total_planned += planned
+            total_actual += actual
+
+            rows.append({
+                "shift": shift,
+                "badge_class": get_shift_badge_class(shift),
+                "planned": planned,
+                "actual": actual,
+                "achievement_pct": round(achievement_pct, 1),
+                "variance": variance,
+                "variance_class": "text-success" if variance >= 0 else "text-danger",
+                "variance_formatted": f"+{variance}" if variance >= 0 else str(variance),
+            })
+
+        # Total row
+        total_achievement = (total_actual / total_planned * 100) if total_planned > 0 else 0
+        total_variance = total_actual - total_planned
+
+        # Chart data for donut
+        chart_labels = [f"Shift {r['shift']}" for r in rows]
+        chart_data = [r['actual'] for r in rows]
+
+        return {
+            "rows": rows,
+            "total_planned": total_planned,
+            "total_actual": total_actual,
+            "total_achievement_pct": round(total_achievement, 1),
+            "total_variance": total_variance,
+            "total_variance_class": "text-success" if total_variance >= 0 else "text-danger",
+            "total_variance_formatted": f"+{total_variance}" if total_variance >= 0 else str(total_variance),
+            "chart": {
+                "labels": chart_labels,
+                "data": chart_data,
+                "colors": ['#48bb78', '#4299e1', '#ed8936'],  # Green, Blue, Orange
+            },
+            "has_plan_data": total_planned > 0,
+        }
+
+    def _build_shift_plan_vs_actual_range(self, daily_plan_range: List[Dict], excavation_range: List[Dict]) -> Dict[str, Any]:
+        """Build shift-wise Plan vs Actual comparison for a date range.
+
+        Aggregates data across all days in the range.
+        """
+        # Aggregate planned by shift
+        planned_by_shift = defaultdict(lambda: {"ob": 0, "ore": 0, "total": 0})
+        for p in daily_plan_range:
+            shift = safe_str(p.get('Shift', 'Unknown')).upper()
+            if shift in ['A', 'B', 'C']:
+                ob = safe_float(p.get('OB_QTY_Cum'))
+                ore = safe_float(p.get('ORE_QTY'))
+                planned_by_shift[shift]["ob"] += ob
+                planned_by_shift[shift]["ore"] += ore
+                planned_by_shift[shift]["total"] += ob + ore
+
+        # Aggregate actual by shift - ALL variants
+        actual_by_shift = defaultdict(float)
+        for r in excavation_range:
+            shift = safe_str(r.get('Shift', 'Unknown')).upper()
+            if shift in ['A', 'B', 'C']:
+                actual_by_shift[shift] += safe_float(r.get('Qty'))
+
+        # Build rows
+        rows = []
+        total_planned = 0
+        total_actual = 0
+
+        for shift in ['A', 'B', 'C']:
+            planned = round(planned_by_shift[shift]["total"])
+            actual = round(actual_by_shift.get(shift, 0))
+            variance = actual - planned
+            achievement_pct = (actual / planned * 100) if planned > 0 else 0
+
+            total_planned += planned
+            total_actual += actual
+
+            rows.append({
+                "shift": shift,
+                "badge_class": get_shift_badge_class(shift),
+                "planned": planned,
+                "actual": actual,
+                "achievement_pct": round(achievement_pct, 1),
+                "variance": variance,
+                "variance_class": "text-success" if variance >= 0 else "text-danger",
+                "variance_formatted": f"+{variance}" if variance >= 0 else str(variance),
+            })
+
+        # Total row
+        total_achievement = (total_actual / total_planned * 100) if total_planned > 0 else 0
+        total_variance = total_actual - total_planned
+
+        # Chart data for donut
+        chart_labels = [f"Shift {r['shift']}" for r in rows]
+        chart_data = [r['actual'] for r in rows]
+
+        return {
+            "rows": rows,
+            "total_planned": total_planned,
+            "total_actual": total_actual,
+            "total_achievement_pct": round(total_achievement, 1),
+            "total_variance": total_variance,
+            "total_variance_class": "text-success" if total_variance >= 0 else "text-danger",
+            "total_variance_formatted": f"+{total_variance}" if total_variance >= 0 else str(total_variance),
+            "chart": {
+                "labels": chart_labels,
+                "data": chart_data,
+                "colors": ['#48bb78', '#4299e1', '#ed8936'],
+            },
+            "has_plan_data": total_planned > 0,
+        }
 
 
 # ============================================================================

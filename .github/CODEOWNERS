@@ -39,14 +39,14 @@
 /tests/test_geology.py @rohit-3093
 
 # Quality Control Department
-/departments/qc/ @qc-lead
-/templates/qc_dashboard.html @qc-lead
-/tests/test_qc.py @qc-lead
+/departments/qc/ @KamleshOjha-BAL
+/templates/qc_dashboard.html @KamleshOjha-BAL
+/tests/test_qc.py @KamleshOjha-BAL
 
 # Supply Chain Management Department
-/departments/scm/ @scm-lead
-/templates/scm_dashboard.html @scm-lead
-/tests/test_scm.py @scm-lead
+/departments/scm/ @Aparna-Samal3081
+/templates/scm_dashboard.html @Aparna-Samal3081
+/tests/test_scm.py @Aparna-Samal3081
 
 # Automobile Department
 /departments/automobile/ @rohit-3093

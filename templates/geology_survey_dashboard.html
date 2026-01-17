@@ -194,6 +194,20 @@
             background: #f7fafc;
         }
 
+        /* Scrollable table container */
+        .table-scroll-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 8px;
+        }
+
+        .table-scroll-container .data-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
         .badge {
             padding: 4px 10px;
             border-radius: 12px;
@@ -229,6 +243,11 @@
         .badge-lg {
             background: rgba(237, 137, 54, 0.2);
             color: #c05621;
+        }
+
+        .badge-mixed {
+            background: rgba(159, 122, 234, 0.2);
+            color: #6b46c1;
         }
 
         .chart-container {
@@ -461,28 +480,28 @@
         </div>
         <div class="kpi-grid" style="margin-bottom: 0;">
             <div class="mtd-kpi-card green">
-                <div class="mtd-value green">11,068</div>
-                <div class="kpi-label">MTD Total Excavation (MT)</div>
+                <div class="mtd-value green">5,000</div>
+                <div class="kpi-label">ORE (MT)</div>
+            </div>
+            <div class="mtd-kpi-card orange">
+                <div class="mtd-value orange">4,000</div>
+                <div class="kpi-label">Overburden (MT)</div>
+            </div>
+            <div class="mtd-kpi-card brown" style="border-left: 4px solid #8B4513;">
+                <div class="mtd-value" style="color: #8B4513;">2,000</div>
+                <div class="kpi-label">SILT (MT)</div>
             </div>
             <div class="mtd-kpi-card blue">
                 <div class="mtd-value blue">835</div>
-                <div class="kpi-label">MTD Total Trips</div>
-            </div>
-            <div class="mtd-kpi-card orange">
-                <div class="mtd-value orange">9</div>
-                <div class="kpi-label">Working Days</div>
+                <div class="kpi-label">Total Trips</div>
             </div>
             <div class="mtd-kpi-card purple">
-                <div class="mtd-value purple">1,230</div>
-                <div class="kpi-label">Avg Daily Production (MT)</div>
+                <div class="mtd-value purple">9</div>
+                <div class="kpi-label">Working Days</div>
             </div>
             <div class="mtd-kpi-card pink">
                 <div class="mtd-value pink">49.3%</div>
-                <div class="kpi-label">MTD Avg Cr₂O₃</div>
-            </div>
-            <div class="mtd-kpi-card teal">
-                <div class="mtd-value teal">17</div>
-                <div class="kpi-label">Samples Analyzed</div>
+                <div class="kpi-label">Avg Cr₂O₃</div>
             </div>
         </div>
     </div>
@@ -490,41 +509,46 @@
     <div class="section-grid">
         <div class="section-card">
             <div class="section-title">
-                <div class="icon">🔄</div>Shift-wise Production
+                <div class="icon">🔄</div>Shift-wise Plan vs Actual
             </div>
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>Shift</th>
-                        <th>Trips</th>
-                        <th>Quantity (MT)</th>
-                        <th>% of Day</th>
+                        <th>Planned (MT)</th>
+                        <th>Actual (MT)</th>
+                        <th>Achievement %</th>
+                        <th>Variance</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td><span class="badge badge-shift-a">Shift A</span></td>
-                        <td>24</td>
+                        <td>500</td>
                         <td>280</td>
-                        <td>21.4%</td>
+                        <td>56.0%</td>
+                        <td class="text-danger">-220</td>
                     </tr>
                     <tr>
                         <td><span class="badge badge-shift-b">Shift B</span></td>
-                        <td>74</td>
+                        <td>600</td>
                         <td>760</td>
-                        <td>58.0%</td>
+                        <td>126.7%</td>
+                        <td class="text-success">+160</td>
                     </tr>
                     <tr>
                         <td><span class="badge badge-shift-c">Shift C</span></td>
-                        <td>27</td>
+                        <td>400</td>
                         <td>270</td>
-                        <td>20.6%</td>
+                        <td>67.5%</td>
+                        <td class="text-danger">-130</td>
                     </tr>
                     <tr style="background: #f7fafc; font-weight: 600;">
                         <td>Total</td>
-                        <td>125</td>
+                        <td>1,500</td>
                         <td>1,310</td>
-                        <td>100%</td>
+                        <td>87.3%</td>
+                        <td class="text-danger">-190</td>
                     </tr>
                 </tbody>
             </table>
@@ -815,20 +839,13 @@
                 </tr>
             </tbody>
         </table>
-        <div class="progress-bar-container" style="margin-top: 20px;">
-            <div class="progress-label"><span>Monthly Target Achievement (16 days / 31 days = 51.6% time
-                    elapsed)</span><span>21.2% Achieved</span></div>
-            <div class="progress-bar" style="height: 20px;">
-                <div class="progress-fill" style="width: 21.2%; background: linear-gradient(90deg, #f56565, #ed8936);">
-                </div>
-            </div>
-        </div>
     </div>
 
     <div class="section-card full-width" style="margin-bottom: 25px;">
         <div class="section-title">
             <div class="icon">📋</div>Detailed Excavation Records - December 16, 2025
         </div>
+        <div class="table-scroll-container" style="max-height: 400px; overflow-y: auto;">
         <table class="data-table">
             <thead>
                 <tr>
@@ -898,6 +915,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
     </div>
 
     <div class="section-grid">
@@ -1056,27 +1074,11 @@
 
     <div class="section-card full-width">
         <div class="section-title">
-            <div class="icon">📝</div>Executive Summary - December 16, 2025
+            <div class="icon">🤖</div>AI Insight Summary
         </div>
         <div class="summary-box">
-            <div class="summary-content" style="font-size: 0.95rem;">
-                <p><strong>Day Performance:</strong> December 16 recorded 1,310 MT excavation across 125 trips from 3
-                    active locations. Shift B was the primary contributor (58%) with Pit W (5mrl) being the dominant
-                    location (59.5%). Quality parameters were excellent with average Cr₂O₃ at 52% and Cr:Fe ratio at
-                    3.27.</p><br>
-                <p><strong>Month-to-Date Status:</strong> Total MTD production stands at 11,068 MT (21.2% of 52,195 MT
-                    target) across 9 working days, averaging 1,230 MT/day. The operation is significantly behind plan
-                    with only 51.6% of the month remaining.</p><br>
-                <p><strong>Critical Concerns:</strong> (1) Major plan shortfall requiring 123% productivity increase to
-                    achieve target (2) DVS West and DVS East locations with zero progress against 17,919 MT planned (3)
-                    Declining load efficiency from 15 MT to 10.48 MT per trip (4) Shift A underperformance and limited
-                    Shift C utilization.</p><br>
-                <p><strong>Positive Indicators:</strong> (1) Consistent high-grade ore quality (Cr₂O₃ > 50% on multiple
-                    days) (2) Reliable BAL agency performance (3) Strong quality parameters with Cr:Fe ratio averaging
-                    2.94.</p><br>
-                <p><strong>Immediate Actions Required:</strong> Mobilize DVS West/East operations, investigate load
-                    factor decline, expand Shift C operations, and implement daily sample analysis protocol for all
-                    active faces.</p>
+            <div class="summary-content ai-summary" style="font-size: 0.95rem; line-height: 1.8;">
+                <p>AI-generated executive summary will appear here based on the analysis of production data, quality metrics, and operational patterns.</p>
             </div>
         </div>
     </div>

@@ -119,6 +119,10 @@ services:
         max-file: "10" # Keep 10 log files (500MB total)
         compress: "true" # Compress old logs
 
+    # Allow container to reach host network services
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     # Network configuration
     networks:
       - bal-network

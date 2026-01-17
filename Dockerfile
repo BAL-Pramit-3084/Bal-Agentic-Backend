@@ -14,12 +14,18 @@ FROM python:3.11-slim AS builder
 # Set working directory
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Fix Debian mirror issues by using HTTPS and clearing cache
+# The 403 errors are due to CDN issues with HTTP
+RUN rm -rf /var/lib/apt/lists/* && \
+    sed -i 's/http:/https:/g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get clean && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
     gcc \
     g++ \
-    default-libmysqlclient-dev \
     pkg-config \
+    libmariadb-dev-compat \
+    libmariadb-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python packages
@@ -42,9 +48,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     TZ=Asia/Kolkata \
     PYTHONPATH=/app
 
-# Install runtime dependencies + Playwright dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    default-libmysqlclient-dev \
+# Fix Debian mirror issues and install runtime dependencies
+# Using HTTPS to avoid 403 errors from CDN
+RUN rm -rf /var/lib/apt/lists/* && \
+    sed -i 's/http:/https:/g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get clean && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libmariadb3 \
     curl \
     ca-certificates \
     tzdata \
@@ -84,7 +95,6 @@ ENV PATH=/home/appuser/.local/bin:$PATH
 ENV PYTHONUSERBASE=/home/appuser/.local
 
 # Install Playwright browsers (chromium only for smaller image)
-# Using python -m to ensure module is found correctly
 RUN python -m playwright install chromium
 
 # Copy application code (respecting .dockerignore)
@@ -112,5 +122,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # =============================================================================
 # ENTRYPOINT & CMD
 # =============================================================================
-# Default command (can be overridden in docker-compose)
 CMD ["python", "app_main.py"]
