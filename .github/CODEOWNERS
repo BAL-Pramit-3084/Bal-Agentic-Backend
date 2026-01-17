@@ -29,9 +29,9 @@
 # ============================================================================
 
 # Furnace Department
-/departments/furnace/ @furnace-lead
-/templates/furnace_dashboard.html @furnace-lead
-/tests/test_furnace.py @furnace-lead
+/departments/furnace/ @ITBAL30802003
+/templates/furnace_dashboard.html @ITBAL30802003
+/tests/test_furnace.py @ITBAL30802003
 
 # Geology Department
 /departments/geology/ @rohit-3093
