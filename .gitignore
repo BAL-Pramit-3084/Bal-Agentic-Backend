@@ -84,14 +84,32 @@ env/
 # Generated HTML dashboards (these are temporary)
 generated_dashboards/*.html
 !generated_dashboards/.gitkeep
+config_modules/generated_dashboards/*.html
+!config_modules/generated_dashboards/.gitkeep
 
 # Test outputs
 test_output/*.html
 test_outputs/*.html
 here-is-output/*.html
+here-is-output/*.pdf
+test_output.pdf
 !test_output/.gitkeep
 !test_outputs/.gitkeep
 !here-is-output/.gitkeep
+
+# Debug / scratch scripts and ad-hoc output (not part of the app)
+debug_*.py
+debug_output*.txt
+output.txt
+output_final.txt
+tail_log.txt
+reproduce_issue.py
+
+# Claude Code session scratch artifacts
+tmpclaude-*
+
+# Packaged/zipped code snapshots (should never be committed)
+*.zip
 
 # Logs
 logs/*.log
@@ -223,4 +241,3 @@ id_dsa*
 # 3. Run: git add departments/<your-dept>/new_file.py
 #
 # ============================================================================
-nul
